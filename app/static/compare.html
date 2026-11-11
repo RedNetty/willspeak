@@ -1,0 +1,1044 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Compare · WillSpeak</title>
+<script src="/static/common.js"></script>
+<script src="/static/pimic.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  .step { display: flex; align-items: baseline; gap: 10px; margin: 0; font-size: 15px; font-weight: 600; }
+  .step b { color: var(--accent); font: 600 13px/1 var(--mono); }
+
+  .cmp-top { display: flex; align-items: center; gap: 20px; min-width: 0; }
+  .cmp-speakers { display: flex; flex: none; }
+  .cmp-speakers button { min-width: 104px; min-height: 52px; padding: 6px 16px; border-radius: 0; flex-direction: column; align-items: flex-start; gap: 4px; font: 700 20px/1 var(--mono); }
+  .cmp-speakers button + button { margin-left: -1px; }
+  .cmp-speakers button .sub { font: 400 12px/1 var(--sans); color: var(--dim); }
+  .cmp-speakers button[aria-pressed="true"] { position: relative; z-index: 1; background: var(--fg); border-color: var(--fg); color: var(--bg); }
+  .cmp-speakers button[aria-pressed="true"] .sub { color: inherit; opacity: .8; }
+  .cmp-model { display: flex; align-items: center; gap: 8px; flex: none; color: var(--dim); font-size: 14px; }
+  .cmp-model select { max-width: 240px; min-height: 44px; }
+  .cmp-status { flex: 1; min-width: 0; color: var(--dim); font-size: 14px; }
+  .cmp-status.busy { color: var(--warn); }
+  .cmp-status.fail { color: var(--bad); }
+
+  .cmp-body { display: grid; grid-template-columns: minmax(230px, 30%) minmax(0, 1fr); gap: clamp(20px, 2.6vw, 40px); min-height: 0; }
+
+  .cmp-left { display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; }
+  .cmp-left > .step { align-items: center; min-height: 36px; }
+  .cmp-clips { flex: 1; min-height: 0; overflow: auto; list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+  .cmp-clips li { display: flex; border-bottom: 1px solid var(--line); }
+  .cmp-clips li.none { padding: 14px 2px; border: 0; color: var(--dim); font-size: 15px; line-height: 1.5; }
+  .cmp-clips li.on { background: var(--accent-soft); box-shadow: inset 4px 0 var(--accent); }
+  .cmp-clips .pick { flex: 1; min-width: 0; justify-content: flex-start; min-height: clamp(32px, 5.4vh, 48px); padding: 4px 10px 4px 14px; border: 0; border-radius: 0; text-align: left; font-weight: 400; font-size: 15px; line-height: 1.25; }
+  .cmp-clips .pick:hover { background: var(--panel-hover); }
+  .cmp-clips li.on .pick { font-weight: 600; }
+  .cmp-clips li.on .pick:hover { background: transparent; }
+  .cmp-clips .t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cmp-play { flex: none; width: 44px; min-height: 0; padding: 0; border: 0; border-radius: 0; color: var(--dim); }
+  .cmp-play:hover { color: var(--fg); }
+  .cmp-play svg { width: 12px; height: 12px; fill: currentColor; }
+
+  .cmp-stage { display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; }
+  .cmp-stage-head { display: flex; align-items: center; gap: 10px; min-height: 36px; }
+  .cmp-stage-head .step { flex: 1; }
+  .cmp-stage-head button { min-height: 36px; padding: 4px 14px; font-size: 14px; }
+
+  .cmp-display { display: flex; flex: 1; flex-direction: column; gap: 16px; min-height: 150px; padding: clamp(14px, 2.2vh, 24px) clamp(16px, 2vw, 28px); overflow: hidden; background: var(--display); color: var(--display-ink); border-left: 6px solid var(--accent); }
+  .cmp-transport { display: flex; align-items: center; gap: 14px; flex: none; }
+  .cmp-transport button { width: 40px; min-height: 40px; padding: 0; flex: none; border-color: var(--display-dim); border-radius: 50%; color: var(--display-ink); }
+  .cmp-transport button:hover { background: rgba(255,255,255,.08); border-color: var(--display-ink); }
+  .cmp-transport button svg { width: 13px; height: 13px; margin-left: 2px; fill: currentColor; }
+  .cmp-transport canvas { flex: 1; min-width: 0; height: 36px; cursor: pointer; }
+
+  .cmp-empty { margin: auto 0; max-width: 40ch; }
+  .cmp-empty .big { margin: 0 0 10px; font-size: clamp(24px, 2.8vw, 38px); font-weight: 600; line-height: 1.15; letter-spacing: -.02em; }
+  .cmp-empty p:last-child { margin: 0; color: var(--display-dim); font-size: 16px; }
+
+  .cmp-align { --size: clamp(20px, 2.4vw, 34px); display: grid; flex: 1; align-content: start; align-items: center; gap: 8px .55em; min-height: 0; overflow: hidden; font-size: var(--size); line-height: 1.3; transition: opacity .15s; }
+  .cmp-align.short { --size: clamp(34px, 5vw, 68px); }
+  .cmp-align.rows { grid-template-columns: max-content minmax(0, 1fr); row-gap: 14px; }
+  .cmp-align.stale { opacity: .35; }
+  .cmp-align .c { padding: 2px 3px; margin: 0 -3px; white-space: nowrap; transition: opacity .15s; }
+  .cmp-align .line { margin: 0; min-width: 0; padding: 0 3px; }
+  .cmp-align .c[data-row="said"] { color: var(--display-dim); }
+  .cmp-align .c[data-row="model"] { font-weight: 600; }
+  .cmp-align .c.x { color: var(--display-bad); text-decoration: underline 2px; text-underline-offset: .16em; }
+  .cmp-align .c.add { color: var(--display-bad); text-decoration: underline dotted 3px; text-underline-offset: .16em; }
+  .cmp-align .c.miss { color: var(--display-bad); opacity: .6; text-decoration: line-through 2px; }
+  .cmp-align .c.now { background: var(--display-accent); color: #0b1430; opacity: 1; }
+  .cmp-align .lab { display: flex; align-items: center; gap: 10px; padding-right: 14px; color: var(--display-dim); font: 600 14px/1.2 var(--sans); white-space: nowrap; }
+  .cmp-align .lab[data-row="model"] { color: var(--display-accent); }
+  .cmp-align .lab button { width: 34px; min-height: 34px; padding: 0; flex: none; border-color: var(--display-dim); border-radius: 50%; color: var(--display-ink); }
+  .cmp-align .lab button:hover { background: rgba(255,255,255,.08); border-color: var(--display-ink); }
+  .cmp-align .lab button svg { width: 11px; height: 11px; margin-left: 2px; fill: currentColor; }
+  .cmp-align[data-active] .c, .cmp-align[data-active] .lab { opacity: .4; }
+  .cmp-align[data-active="said"] [data-row="said"],
+  .cmp-align[data-active="stock"] [data-row="stock"],
+  .cmp-align[data-active="model"] [data-row="model"] { opacity: 1; }
+  .cmp-align[data-active] .c.miss[data-row] { opacity: .3; }
+  .cmp-key { flex: none; margin: 0; color: var(--display-dim); font-size: 13px; }
+  .cmp-key i { font-style: normal; color: var(--display-bad); }
+  .cmp-key .k-x { text-decoration: underline 2px; text-underline-offset: 3px; }
+  .cmp-key .k-miss { text-decoration: line-through 2px; }
+  .cmp-key .k-add { text-decoration: underline dotted 3px; text-underline-offset: 3px; }
+
+  .cmp-res { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: none; }
+  .cmp-res .res { min-width: 0; padding: 2px 20px 2px 0; }
+  .cmp-res .res + .res { padding: 2px 0 2px 20px; border-left: 1px solid var(--line); }
+  .cmp-res .who { color: var(--dim); font-size: 14px; }
+  .cmp-res .mine .who { color: var(--accent); font-weight: 600; }
+  .cmp-res .num { white-space: nowrap; }
+  .cmp-res .num b { font-size: clamp(32px, 3.6vw, 48px); font-weight: 700; line-height: 1.05; letter-spacing: -.03em; }
+  .cmp-res .mine .num b { color: var(--accent); }
+  .cmp-res .num span { margin-left: 8px; color: var(--dim); font-size: 15px; }
+  .cmp-res .lat { color: var(--dim); font-size: 13px; }
+  .cmp-verdict { flex: none; margin: 0; min-height: 1.4em; font-size: 18px; font-weight: 600; }
+
+  .cmp-foot { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 30ch); align-items: end; gap: 32px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .cmp-foot h2 { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+  .cmp-foot h2 span { color: var(--dim); font-weight: 400; }
+  .bars { display: grid; grid-template-columns: max-content minmax(0, 1fr) 4.5ch; align-items: center; gap: 6px 14px; }
+  .bars .name { font-size: 14px; }
+  .bars .track { height: 12px; background: var(--panel2); }
+  .bars .fill { height: 100%; background: var(--dim); }
+  .bars .fill.mine { background: var(--accent); }
+  .bars .val { font-size: 15px; font-weight: 700; text-align: right; }
+  .bars .val.mine { color: var(--accent); }
+  .cmp-cite { margin: 0; color: var(--dim); font-size: 11px; line-height: 1.45; }
+  .cmp-tally { margin: 8px 0 0; overflow: hidden; font-size: 14px; white-space: nowrap; text-overflow: ellipsis; }
+  .cmp-tally b { font-weight: 700; }
+  .cmp-tally .mine { color: var(--accent); }
+  button.rec, button.rec:hover { background: var(--bad); border-color: var(--bad); color: var(--bg); }
+  button[aria-pressed="true"].tour { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+  .cmp-note { flex: none; margin: 0; color: var(--display-dim); font-size: 14px; }
+
+  dialog#about { width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 28px; border: 1px solid var(--control-line); background: var(--bg); color: var(--fg); overflow: auto; }
+  dialog#about::backdrop { background: rgba(0,0,0,.5); }
+  dialog#about h2 { margin: 0 0 12px; font-size: 26px; }
+  dialog#about h3 { margin: 0 0 10px; }
+  dialog#about section + section { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .cmp-totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+  .cmp-totals .n { font-size: 36px; font-weight: 700; line-height: 1.05; letter-spacing: -.03em; }
+  .cmp-totals .mine .n { color: var(--accent); }
+  .cmp-totals .k { margin-top: 6px; font-size: 13px; font-weight: 600; }
+  .cmp-totals .sub { margin-top: 4px; color: var(--dim); font-size: 13px; }
+  .cmp-settings { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+  .cmp-settings label { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; }
+  .cmp-settings label.auto { font-weight: 400; }
+  .cmp-settings select { width: auto; min-width: 200px; min-height: 40px; margin: 0; padding: 6px 8px; font-size: 14px; }
+  .cmp-settings button { min-height: 40px; padding: 6px 14px; }
+  .cmp-keytable { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 13px; }
+  .cmp-keytable dt { white-space: nowrap; }
+  .cmp-keytable dd { margin: 0; color: var(--dim); }
+
+  @media (min-width: 760px) {
+    body.page-compare { display: flex; flex-direction: column; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+    body.page-compare .app-sidebar { flex: none; min-height: 50px; gap: 32px; }
+    body.page-compare .app-brand { font-size: 21px; }
+    body.page-compare .app-nav a { min-height: 40px; }
+    body.page-compare .app-main { flex: 1; min-height: 0; max-width: none; padding: 12px clamp(16px, 2.5vw, 40px) 10px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 14px; }
+  }
+  @media (min-width: 760px) and (max-height: 680px) {
+    body.page-compare .app-sidebar { min-height: 42px; }
+    body.page-compare .app-main { gap: 8px; padding-top: 8px; padding-bottom: 6px; }
+    .cmp-speakers button { min-height: 44px; font-size: 17px; }
+    .cmp-stage { gap: 6px; }
+    .cmp-stage-head { min-height: 30px; }
+    .cmp-stage-head button { min-height: 30px; padding-block: 2px; }
+    .cmp-display { gap: 10px; }
+    .cmp-transport canvas { height: 30px; }
+    .cmp-transport button { width: 34px; min-height: 34px; }
+    .cmp-align, .cmp-align.rows { --size: clamp(18px, 2vw, 26px); row-gap: 4px; }
+    .cmp-align .lab button { width: 30px; min-height: 30px; }
+    .cmp-align.short { --size: clamp(28px, 4vw, 48px); }
+    .cmp-res .num b { font-size: 30px; }
+    .cmp-verdict { font-size: 16px; }
+    .bars { gap: 3px 14px; }
+    .bars .track { height: 10px; }
+  }
+  @media (max-width: 759px) {
+    .cmp-top { flex-wrap: wrap; }
+    .cmp-status { order: 3; flex-basis: 100%; }
+    .cmp-speakers { width: 100%; }
+    .cmp-speakers button { flex: 1; min-width: 0; }
+    .cmp-model { flex: 1 1 100%; }
+    .cmp-model select { flex: 1; max-width: none; }
+    .cmp-body { grid-template-columns: minmax(0, 1fr); margin-top: 18px; }
+    .cmp-clips { max-height: 340px; }
+    .cmp-stage { margin-top: 14px; }
+    .cmp-stage-head { flex-wrap: wrap; }
+    .cmp-stage-head .step { flex-basis: 100%; }
+    .cmp-display { min-height: 240px; }
+    .cmp-res { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+    .cmp-res .res + .res { padding-left: 0; border-left: 0; }
+    .cmp-foot { grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 22px; }
+  }
+</style>
+</head>
+<body class="app-shell page-compare">
+<a class="skip-link" href="#main-content">Skip to content</a>
+<header class="app-sidebar">
+  <a class="app-brand" href="/live" aria-label="WillSpeak home">
+    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square" focusable="false"><path d="M4 10v4m4-7v10m4-13v16m4-13v10m4-7v4"/></svg></span>
+    <span class="brand-copy"><strong>WillSpeak</strong></span>
+  </a>
+  <nav class="app-nav" aria-label="Main navigation">
+    <a href="/live"><span class="nav-index" aria-hidden="true">01</span><span class="nav-label">Speak</span></a>
+    <a href="/"><span class="nav-index" aria-hidden="true">02</span><span class="nav-label">Record</span></a>
+    <a href="/review"><span class="nav-index" aria-hidden="true">03</span><span class="nav-label">Review</span><span class="nav-badge" data-nav-badge hidden></span></a>
+    <a href="/coverage"><span class="nav-index" aria-hidden="true">04</span><span class="nav-label">Coverage</span></a>
+    <a href="/compare" class="on" aria-current="page"><span class="nav-index" aria-hidden="true">05</span><span class="nav-label">Compare</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <label for="theme-select">Theme</label>
+    <select id="theme-select" data-theme-select aria-label="Color theme">
+      <option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option>
+    </select>
+  </div>
+</header>
+<main class="wrap app-main" id="main-content" tabindex="-1">
+  <h1 class="sr-only">Compare the standard model with a model trained for one speaker</h1>
+
+  <div class="cmp-top">
+    <h2 class="step" id="speaker-title"><b>1</b>Pick a speaker</h2>
+    <div class="cmp-speakers" id="speakers" role="group" aria-labelledby="speaker-title"></div>
+    <label class="cmp-model" title="Which model writes the trained answer. Results from other models are not added to the tally.">Model <select id="modelpick"><option value="">Speaker's own</option></select></label>
+    <div class="cmp-status" id="status" role="status" aria-live="polite">Loading…</div>
+    <button type="button" id="tourbtn" class="tour" aria-pressed="false" aria-keyshortcuts="t" disabled>Tour</button>
+    <button type="button" id="aboutbtn">How this works</button>
+  </div>
+
+  <div class="cmp-body">
+    <section class="cmp-left" aria-labelledby="clip-title">
+      <h2 class="step" id="clip-title"><b>2</b>Pick a recording</h2>
+      <ol class="cmp-clips" id="clips"></ol>
+    </section>
+
+    <section class="cmp-stage" aria-labelledby="heard-title">
+      <div class="cmp-stage-head">
+        <h2 class="step" id="heard-title"><b>3</b>Listen, then compare</h2>
+        <button type="button" id="replay" disabled>Play all</button>
+        <button type="button" id="nextclip" disabled>Next recording</button>
+        <button type="button" id="trybtn" aria-keyshortcuts="r" disabled>Try your voice</button>
+      </div>
+      <div class="cmp-display" id="display">
+        <div class="cmp-transport" id="transport" hidden>
+          <button type="button" id="playrec" aria-label="Play the recording"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5v13l11-6.5z"/></svg></button>
+          <canvas id="wave" aria-hidden="true"></canvas>
+        </div>
+        <div class="cmp-empty" id="empty"><p class="big" id="emptybig">Pick a speaker to begin.</p><p id="emptysub">Then pick one of their recordings and press play to hear it, then each model's answer.</p></div>
+        <div class="cmp-align" id="align" hidden aria-hidden="true"></div>
+        <p class="cmp-key" id="key" hidden aria-hidden="true"></p>
+        <p class="cmp-note" id="note" hidden></p>
+        <div class="sr-only" id="alignsr"></div>
+      </div>
+      <div class="cmp-res" id="results" hidden>
+        <div class="res stock"><div class="who">Standard model</div><div class="num"><b id="stockerr"></b><span id="stockof"></span></div><div class="lat" id="stocklat"></div></div>
+        <div class="res mine"><div class="who" id="minewho">Trained for this speaker</div><div class="num"><b id="mineerr"></b><span id="mineof"></span></div><div class="lat" id="minelat"></div></div>
+      </div>
+      <p class="cmp-verdict" id="verdict" aria-live="polite"></p>
+    </section>
+  </div>
+
+  <footer class="cmp-foot">
+    <div>
+      <h2>Words wrong across every test recording <span>(lower is better)</span></h2>
+      <div class="bars" id="bars"></div>
+      <p class="cmp-tally" id="tally" hidden></p>
+    </div>
+    <p class="cmp-cite">Recordings from the TORGO database of speakers with dysarthria (Rudzicz, Namasivayam &amp; Wolff, 2012). Full reference under How this works.</p>
+  </footer>
+</main>
+
+<dialog id="about" aria-labelledby="about-title">
+  <section>
+    <h2 id="about-title">How this works</h2>
+    <p class="field-help">The standard model is Parakeet-TDT 0.6B v2, a speech recogniser trained on typical speech. Each speaker's model started from it, was trained on other speakers with severe dysarthria, then on that speaker's own training recordings. Every recording here is from the held-out test set: none of these prompts was in that speaker's training data. The list was drawn at random before the expo, so it includes recordings the models get wrong. Single words are the weak spot. What you see is the raw model output, with no phrase list.</p>
+    <p class="field-help">Try your voice records a few seconds from this computer's microphone and sends it to both models on this device. It is not saved and not scored. Each speaker's model was trained for one person's speech, so it may do worse on yours than the standard model.</p>
+    <p class="tiny muted" id="rule"></p>
+  </section>
+  <section>
+    <h3>Recorded results</h3>
+    <p class="tiny muted" id="recorded"></p>
+    <p class="tiny muted" id="recsource"></p>
+  </section>
+  <section>
+    <div class="section-heading"><h3>This demo so far</h3><button type="button" id="resettotals">Reset</button></div>
+    <p class="tiny muted">Counts each test recording once, across page reloads, until Reset. Recordings from Try your voice are not counted: there is no reference text to score them against.</p>
+    <div class="cmp-totals">
+      <div><div class="n" id="tstock">0</div><div class="k">standard model, words wrong</div><div class="sub" id="tstocksub">no recordings yet</div></div>
+      <div class="mine"><div class="n" id="tmine">0</div><div class="k">speaker models, words wrong</div><div class="sub" id="tminesub">no recordings yet</div></div>
+    </div>
+  </section>
+  <section>
+    <h3>Sound</h3>
+    <div class="cmp-settings">
+      <label>Voice <select id="voice"></select></label>
+      <button type="button" id="recheck">Find voices</button>
+    </div>
+    <p class="tiny muted" id="voicehelp" hidden>No English voice is installed. In a Pi terminal run <span class="mono">sudo apt install speech-dispatcher espeak-ng</span>, fully close and reopen Chromium, then press Find voices.</p>
+  </section>
+  <section>
+    <h3>Presenter keys</h3>
+    <dl class="cmp-keytable">
+      <dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Load that speaker's model. The standard model stays loaded.</dd>
+      <dt>Model</dt><dd>Test any model folder in <span class="mono">models/</span> on the chosen speaker's recordings in place of their own model. Those results are not added to the tally.</dd>
+      <dt><kbd>N</kbd></dt><dd>Next recording.</dd>
+      <dt><kbd>P</kbd></dt><dd>Play the recording, then both answers.</dd>
+      <dt><kbd>R</kbd></dt><dd>Try your voice: start recording, and press again to stop. Nothing is saved.</dd>
+      <dt><kbd>T</kbd></dt><dd>Tour: go through every recording and speaker on its own. Any key or click stops it.</dd>
+      <dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Move through the list; <kbd>Enter</kbd> picks a recording.</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Stop the sound, or close this window.</dd>
+    </dl>
+  </section>
+  <section>
+    <h3>Device</h3>
+    <p class="tiny muted mono" id="device"></p>
+    <p class="tiny muted">Recordings from the TORGO database: Rudzicz, F., Namasivayam, A. K., &amp; Wolff, T. (2012). The TORGO database of acoustic and articulatory speech from speakers with dysarthria. <i>Language Resources and Evaluation</i>, 46(4), 523–541.</p>
+  </section>
+  <p style="margin:22px 0 0"><button type="button" id="aboutclose" class="primary">Close</button></p>
+</dialog>
+
+<script>
+let state = null, current = null, busy = false, lastResult = null;
+const TOTALS_KEY = 'willspeak-compare-totals';
+const totals = { clips: 0, ref: 0, stock: 0, mine: 0 };
+const scored = new Set();
+try {
+  const saved = JSON.parse(localStorage.getItem(TOTALS_KEY) || 'null');
+  if (saved && Array.isArray(saved.ids) && ['clips', 'ref', 'stock', 'mine'].every(k => Number.isFinite(saved[k]))) {
+    for (const k of ['clips', 'ref', 'stock', 'mine']) totals[k] = saved[k];
+    for (const id of saved.ids) scored.add(String(id));
+  }
+} catch (_) {  }
+function saveTotals() {
+  try { localStorage.setItem(TOTALS_KEY, JSON.stringify({ ...totals, ids: [...scored] })); } catch (_) {  }
+}
+
+const mb = v => (v == null ? 'n/a' : `${(v / 1024).toFixed(2)} GB`);
+const why = e => { try { return JSON.parse(e.message).detail || e.message; } catch (_) { return e.message || String(e); } };
+const pct = (e, n) => (n ? `${(100 * e / n).toFixed(1)}%` : '');
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const secs = ms => (Number.isFinite(ms) ? `written in ${(ms / 1000).toFixed(2)} s on this device` : '');
+const PLAY_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5v13l11-6.5z"/></svg>';
+
+function setStatus(text, kind) {
+  const s = $('#status');
+  s.textContent = text;
+  s.className = 'cmp-status' + (kind ? ' ' + kind : '');
+}
+function setBusy(on) {
+  busy = on;
+  for (const b of $$('#speakers button, #clips .pick')) b.disabled = on || b.dataset.off === '1';
+  $('#modelpick').disabled = on || tour.on;
+  $('#nextclip').disabled = on || !speakerClips().length;
+  drawControls();
+}
+const pickedModel = () => $('#modelpick').value;
+const usable = s => !!s.clips && (s.present || !!pickedModel());
+const availableSpeakers = () => (state ? state.speakers.filter(usable) : []);
+const shortName = m => m.replace(/\/(onnx-int8|model)$/, '');
+const mineLabel = speaker => (state?.custom && state.loaded_model ? shortName(state.loaded_model) : `Trained for ${speaker}`);
+const mineSubject = speaker => (state?.custom && state.loaded_model ? `The model ${shortName(state.loaded_model)}` : `The model trained for ${speaker}`);
+function drawModels() {
+  const sel = $('#modelpick'), keep = state.loaded ? (state.custom ? state.loaded_model : '') : sel.value;
+  const opts = [['', "Speaker's own"], ...state.models.map(m => [m, m])];
+  if (keep && !state.models.includes(keep)) opts.push([keep, keep]);
+  sel.replaceChildren(...opts.map(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; return o; }));
+  sel.value = keep;
+  sel.disabled = busy || tour.on;
+}
+function drawControls() {
+  const recording = !!mic.stream;
+  const t = $('#trybtn');
+  t.disabled = !state?.loaded || (busy && !recording) || tour.on;
+  t.classList.toggle('rec', recording);
+  t.textContent = recording ? `Stop (${((performance.now() - mic.started) / 1000).toFixed(1)} s)` : 'Try your voice';
+  $('#tourbtn').disabled = !tour.on && (recording || !availableSpeakers().length);
+  $('#tourbtn').setAttribute('aria-pressed', String(tour.on));
+  $('#tourbtn').textContent = tour.on ? 'Stop tour' : 'Tour';
+}
+const speakerClips = () => (state ? state.clips.filter(c => c.speaker === state.loaded) : []);
+
+let focusKey = null;
+document.addEventListener('focusin', e => { const d = e.target.dataset || {}; focusKey = d.speaker || d.id || null; });
+function keepFocus(draw) {
+  const a = document.activeElement;
+  const had = focusKey && (a === document.body || a?.dataset?.speaker || a?.dataset?.id);
+  draw();
+  if (had) { const b = $(`[data-speaker="${focusKey}"], #clips .pick[data-id="${focusKey}"]`); if (b && !b.disabled) b.focus(); }
+}
+
+function drawSpeakers() {
+  $('#speakers').replaceChildren(...state.speakers.map((s, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.speaker = s.id;
+    b.dataset.off = usable(s) ? '' : '1';
+    b.disabled = busy || b.dataset.off === '1';
+    b.setAttribute('aria-pressed', String(state.loaded === s.id));
+    b.setAttribute('aria-keyshortcuts', String(i + 1));
+    b.innerHTML = `${s.id}<span class="sub">${!s.clips ? 'no recordings' : !s.present && !pickedModel() ? 'no model' : plural(s.clips, 'recording')}</span>`;
+    b.addEventListener('click', () => chooseSpeaker(s.id));
+    return b;
+  }));
+}
+
+function drawClips() {
+  if (!state.loaded) {
+    const li = document.createElement('li');
+    li.className = 'none';
+    li.textContent = 'Their recordings will be listed here.';
+    $('#clips').replaceChildren(li);
+    return;
+  }
+  $('#clips').replaceChildren(...speakerClips().map((c, i) => {
+    const li = document.createElement('li'), pick = document.createElement('button'), play = document.createElement('button');
+    if (current === c.id) { li.className = 'on'; pick.setAttribute('aria-current', 'true'); }
+    pick.type = 'button'; pick.className = 'pick'; pick.disabled = busy; pick.dataset.id = c.id;
+    pick.innerHTML = `<span class="t">${escapeHtml(c.text)}</span>`;
+    pick.title = c.text;
+    pick.addEventListener('click', () => decodeClip(c.id));
+    play.type = 'button'; play.className = 'cmp-play';
+    play.setAttribute('aria-label', `Only play the recording of “${c.text}”`);
+    play.innerHTML = PLAY_ICON;
+    play.addEventListener('click', () => { stopAll(); playRecording(c.id); });
+    li.append(pick, play);
+    return li;
+  }));
+}
+
+function renderRecorded() {
+  const [stock, mine] = state.recorded;
+  const rows = stock && mine && stock.pooled != null && mine.pooled != null
+    ? [['Standard model', stock.pooled, ''], ['Trained for each speaker', mine.pooled, ' mine']] : [];
+  $('#bars').innerHTML = rows.map(([name, v, cls]) =>
+    `<span class="name">${name}</span><span class="track" role="img" aria-label="${name}: ${Math.round(v)}% of words wrong"><i class="fill${cls}" style="display:block;width:${Math.max(0, Math.min(100, v))}%"></i></span><span class="val${cls}">${Math.round(v)}%</span>`).join('');
+  const f = v => (v == null ? 'not measured' : `${v.toFixed(1)}%`);
+  $('#recorded').textContent = 'Word error rate over every held-out test recording of M01, M02 and M04: ' +
+    state.recorded.map(r => `${r.name}, ${f(r.pooled)} on all words and ${f(r.sentences)} on sentences`).join('; ') + '.';
+  const per = state.speakers.filter(s => s.recorded).map(s => `${s.id} ${pct(s.recorded.errors, s.recorded.n_ref)} (${s.recorded.errors} of ${s.recorded.n_ref})`);
+  $('#recsource').textContent = 'Sources: ' + state.recorded.map(r => r.source).join('; ') + '.' + (per.length ? ` This device's int8 models on their full test sets: ${per.join(', ')}.` : '');
+  $('#rule').textContent = state.rule ? `Recording list: ${state.rule}.` : '';
+}
+
+function showStatus() {
+  const w = state.last_swap;
+  $('#device').textContent = !state.loaded ? `Standard model ${state.stock.loaded ? 'loaded' : 'not loaded yet'}. Memory in use: ${mb(state.rss_mb)}.`
+    : w && w.to === state.loaded
+      ? `${w.folder || state.loaded} loaded in ${(w.swap_ms / 1000).toFixed(1)} s. Memory ${mb(w.rss_before_mb)} before, ${mb(w.rss_after_unload_mb)} after unloading, ${mb(w.rss_after_load_mb)} with both models.`
+      : `${state.loaded_model || state.loaded} loaded for ${state.loaded}'s recordings.`;
+  if (state.clip_error) return setStatus('Setup needed: see the panel below.', 'fail');
+  if (!tour.on && !mic.stream) setStatus('');
+}
+
+function showEmpty(big, sub) {
+  $('#empty').hidden = false;
+  $('#emptybig').textContent = big;
+  $('#emptysub').textContent = sub;
+}
+
+async function refresh() {
+  state = await get('/api/compare/state');
+  drawModels(); keepFocus(drawSpeakers); keepFocus(drawClips);
+  renderRecorded(); showStatus(); renderTotals();
+  $('#nextclip').disabled = busy || !speakerClips().length;
+  drawControls();
+  if (!lastResult) {
+    if (state.clip_error) showEmpty('The recording list is missing.', state.clip_error);
+    else if (state.loaded) showEmpty('Now pick one of their recordings.', 'It plays straight away while both models write down what they hear.');
+  }
+}
+
+async function chooseSpeaker(id) {
+  const model = pickedModel();
+  if (busy || !state || (state.loaded === id && (state.custom ? state.loaded_model : '') === model)) return;
+  const s = state.speakers.find(x => x.id === id);
+  if (!s || !usable(s)) return;
+  const what = model ? shortName(model) : `${id}'s model`;
+  stopAll();
+  setBusy(true);
+  setStatus(`Loading ${what}…`, 'busy');
+  clearResult();
+  showEmpty(`Loading ${what}…`, 'This takes a few seconds.');
+  try {
+    await post('/api/compare/speaker', { speaker: id, model: model || null });
+    current = null;
+  } catch (e) {
+    setStatus(`Could not load ${what}: ${why(e)}`, 'fail');
+    showEmpty(`${what} could not be loaded.`, model ? "Pick another model, or Speaker's own." : 'Try another speaker.');
+    setBusy(false);
+    return;
+  }
+  setBusy(false);
+  await refresh();
+}
+
+function splitOps(ops) {
+  const at = [], ins = [[]];
+  for (const o of ops) {
+    if (o.op === 'ins') ins[at.length].push(o);
+    else { at.push(o); ins.push([]); }
+  }
+  return { at, ins };
+}
+function alignColumns(stockOps, mineOps) {
+  const s = splitOps(stockOps), m = splitOps(mineOps);
+  if (s.at.length !== m.at.length) return null;
+  const cols = [];
+  for (let i = 0; i <= s.at.length; i++) {
+    const k = Math.max(s.ins[i].length, m.ins[i].length);
+    for (let j = 0; j < k; j++) cols.push({ said: null, stock: s.ins[i][j] || null, model: m.ins[i][j] || null });
+    if (i < s.at.length) cols.push({ said: s.at[i].ref, stock: s.at[i], model: m.at[i] });
+  }
+  return cols;
+}
+function cell(row, o, wordIndex) {
+  if (row === 'said') return o == null ? `<span class="c" data-row="said"></span>` : `<span class="c" data-row="said">${escapeHtml(o)}</span>`;
+  if (!o) return `<span class="c" data-row="${row}"></span>`;
+  const w = wordIndex != null ? ` data-w="${wordIndex}"` : '';
+  if (o.op === 'ok') return `<span class="c" data-row="${row}"${w}>${escapeHtml(o.hyp)}</span>`;
+  if (o.op === 'del') return `<span class="c miss" data-row="${row}" title="missed">${escapeHtml(o.ref)}</span>`;
+  if (o.op === 'sub') return `<span class="c x" data-row="${row}"${w} title="should be ${escapeHtml(o.ref)}">${escapeHtml(o.hyp)}</span>`;
+  return `<span class="c add" data-row="${row}"${w} title="added: not in what was said">${escapeHtml(o.hyp)}</span>`;
+}
+const ROWS = [['said', 'Said', 'Play the recording'], ['stock', 'Standard', "Hear the standard model's answer"],
+              ['model', 'Trained', "Hear the trained model's answer"]];
+let alignData = null;
+function label(row, text, aria) {
+  return `<span class="lab" data-row="${row}"><button type="button" data-play="${row}" aria-label="${aria}">${PLAY_ICON}</button>${text}</span>`;
+}
+function drawRows(cols) {
+  const el = $('#align'), count = { stock: 0, model: 0 };
+  const words = row => cols.map(c => {
+    const o = c[row];
+    if (row === 'said') return o == null ? '' : cell('said', o);
+    return o ? cell(row, o, o.op !== 'del' ? count[row]++ : null) : '';
+  }).filter(Boolean).join(' ');
+  el.className = 'cmp-align rows' + (cols.length <= 3 ? ' short' : '');
+  el.innerHTML = ROWS.map(([row, text, aria]) => label(row, text, aria) + `<p class="line">${words(row)}</p>`).join('');
+}
+function fits(el) { return el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1; }
+function shrinkToFit(el, floor) {
+  let size = parseFloat(getComputedStyle(el).fontSize);
+  while (!fits(el) && size > floor) {
+    size = Math.max(floor, size - Math.max(1, size * 0.08));
+    el.style.setProperty('--size', `${size}px`);
+  }
+  return fits(el);
+}
+function layoutAlign() {
+  const el = $('#align');
+  if (el.hidden) return;
+  if (tryData) { el.style.removeProperty('--size'); drawTry(tryData); shrinkToFit(el, 13); return; }
+  if (!alignData) return;
+  const active = el.dataset.active, cls = el.classList.contains('stale');
+  el.style.removeProperty('--size');
+  drawRows(alignData);
+  shrinkToFit(el, 13);
+  if (active) el.dataset.active = active;
+  el.classList.toggle('stale', cls);
+}
+function renderAlignment(r) {
+  tryData = null; $('#note').hidden = true;
+  alignData = alignColumns(r.stock.ops, r.speaker.ops) || [];
+  const el = $('#align');
+  el.removeAttribute('data-active');
+  el.classList.remove('stale');
+  el.hidden = false;
+  const ops = alignData.flatMap(c => [c.stock, c.model]).filter(Boolean).map(o => o.op);
+  const key = [];
+  if (ops.includes('sub')) key.push('<i class="k-x">Red</i> means a wrong word.');
+  if (ops.includes('del')) key.push('<i class="k-miss">Struck through</i> means a word the model missed.');
+  if (ops.includes('ins')) key.push('<i class="k-add">Dotted underline</i> means a word the model added that was not said.');
+  $('#key').innerHTML = key.join(' ');
+  $('#key').hidden = !key.length;
+  $('#empty').hidden = true;
+  layoutAlign();
+  $('#alignsr').textContent = `Said: ${r.clip.text}. The standard model wrote: ${r.stock.text || 'nothing'}, ${r.stock.errors} of ${r.stock.n_ref} words wrong. ${mineSubject(r.clip.speaker)} wrote: ${r.speaker.text || 'nothing'}, ${r.speaker.errors} of ${r.speaker.n_ref} words wrong.`;
+}
+let displaySize = '';
+new ResizeObserver(entries => {
+  const r = entries[0].contentRect, key = `${Math.round(r.width)}x${Math.round(r.height)}`;
+  if (key !== displaySize) { displaySize = key; layoutAlign(); drawWave(); }
+}).observe($('#display'));
+$('#align').addEventListener('click', e => {
+  const b = e.target.closest('[data-play]');
+  if (!b || !lastResult) return;
+  if (b.dataset.play === 'said') { stopAll(); playRecording(lastResult.clip.id); }
+  else hearRow(b.dataset.play === 'stock' ? 'stock' : 'speaker');
+});
+
+function setActive(row) {
+  const el = $('#align');
+  if (row) el.dataset.active = row; else el.removeAttribute('data-active');
+  for (const c of $$('.c.now', el)) c.classList.remove('now');
+}
+function markWord(row, i) {
+  const el = $('#align');
+  for (const c of $$('.c.now', el)) c.classList.remove('now');
+  const c = $(`.c[data-row="${row}"][data-w="${i}"]`, el);
+  if (c) c.classList.add('now');
+}
+
+function clearResult() {
+  lastResult = null;
+  $('#align').hidden = true; $('#align').innerHTML = ''; alignData = null; tryData = null;
+  $('#key').hidden = true; $('#note').hidden = true;
+  $('#transport').hidden = true;
+  $('#results').hidden = true;
+  $('#verdict').textContent = '';
+  $('#alignsr').textContent = '';
+  $('#replay').disabled = true;
+  wave.peaks = null;
+}
+
+function showScores(r) {
+  $('#results').hidden = false;
+  $('#minewho').textContent = mineLabel(r.clip.speaker);
+  for (const [key, side] of [['stock', r.stock], ['mine', r.speaker]]) {
+    $(`#${key}err`).textContent = side.errors;
+    $(`#${key}of`).textContent = `of ${plural(side.n_ref, 'word')} wrong`;
+    $(`#${key}lat`).textContent = secs(side.latency_ms);
+  }
+  const d = r.stock.errors - r.speaker.errors;
+  $('#verdict').textContent = d > 0 ? `${mineSubject(r.clip.speaker)} got ${plural(d, 'fewer word')} wrong.`
+    : d < 0 ? `The standard model did better on this one, by ${plural(-d, 'word')}.`
+    : r.stock.errors === 0 ? 'Both models got every word right.' : 'Both models made the same number of mistakes.';
+}
+
+async function decodeClip(id) {
+  if (busy) return;
+  const clip = state.clips.find(c => c.id === id);
+  if (!clip) return;
+  stopAll();
+  current = id; keepFocus(drawClips);
+  setBusy(true);
+  setStatus('Listening…', 'busy');
+  if (lastResult) $('#align').classList.add('stale');
+  else showEmpty(`“${clip.text}”`, 'Both models are writing down what they hear.');
+  showWave(id);
+  let r;
+  try {
+    r = await post('/api/compare/decode', { clip_id: id });
+  } catch (e) {
+    setStatus(`Could not transcribe: ${why(e)}`, 'fail');
+    $('#align').classList.remove('stale');
+    setBusy(false); keepFocus(drawClips);
+    return;
+  }
+  lastResult = r;
+  if (!state.custom && !scored.has(id)) {
+    scored.add(id);
+    totals.clips++; totals.ref += r.stock.n_ref; totals.stock += r.stock.errors; totals.mine += r.speaker.errors;
+    saveTotals();
+  }
+  renderAlignment(r); showScores(r); renderTotals(); showStatus();
+  $('#replay').disabled = false;
+  setBusy(false); keepFocus(drawClips);
+}
+
+function renderTotals() {
+  const z = !totals.clips;
+  $('#tally').hidden = z;
+  $('#tally').innerHTML = z ? '' : `At this table: standard model <b>${pct(totals.stock, totals.ref)}</b>, ` +
+    `<b class="mine">trained ${pct(totals.mine, totals.ref)}</b> of ${plural(totals.ref, 'word')} wrong (${plural(totals.clips, 'recording')})`;
+  $('#tally').title = $('#tally').textContent;
+  $('#tstock').textContent = z ? '0' : `${totals.stock} of ${totals.ref}`;
+  $('#tmine').textContent = z ? '0' : `${totals.mine} of ${totals.ref}`;
+  $('#tstocksub').textContent = z ? 'no recordings yet' : `${pct(totals.stock, totals.ref)} over ${plural(totals.clips, 'recording')}`;
+  $('#tminesub').textContent = z ? 'no recordings yet' : `${pct(totals.mine, totals.ref)} over ${plural(totals.clips, 'recording')}`;
+}
+
+const player = new Audio();
+const audioCache = new Map();
+let decoderCtx = null;
+const wave = { id: null, peaks: null, progress: 0 };
+function loadAudio(id) {
+  if (!audioCache.has(id)) {
+    audioCache.set(id, (async () => {
+      const r = await fetch(`/api/compare/audio/${encodeURIComponent(id)}`);
+      if (!r.ok) throw new Error((await r.text()).slice(0, 200));
+      const blob = await r.blob();
+      const out = { url: URL.createObjectURL(blob), peaks: null };
+      try {
+        decoderCtx ||= new (globalThis.AudioContext || globalThis.webkitAudioContext)();
+        const buf = await decoderCtx.decodeAudioData(await blob.arrayBuffer());
+        out.peaks = peaks(buf.getChannelData(0), 480);
+      } catch (_) {  }
+      return out;
+    })().catch(e => { audioCache.delete(id); throw e; }));
+  }
+  return audioCache.get(id);
+}
+function peaks(x, n) {
+  const out = new Float32Array(n), step = x.length / n;
+  let top = 1e-6;
+  for (let i = 0; i < n; i++) {
+    let m = 0;
+    for (let j = Math.floor(i * step), e = Math.floor((i + 1) * step); j < e; j++) { const v = Math.abs(x[j]); if (v > m) m = v; }
+    out[i] = m; if (m > top) top = m;
+  }
+  for (let i = 0; i < n; i++) out[i] = Math.sqrt(out[i] / top);
+  return out;
+}
+async function showWave(id) {
+  $('#transport').hidden = false;
+  wave.id = id; wave.peaks = null; wave.progress = 0;
+  drawWave();
+  try {
+    const a = await loadAudio(id);
+    if (wave.id !== id) return a;
+    wave.peaks = a.peaks;
+    drawWave();
+    return a;
+  } catch (e) {
+    setStatus(`Could not load the recording: ${why(e)}`, 'fail');
+    return null;
+  }
+}
+function drawWave() {
+  const c = $('#wave');
+  if ($('#transport').hidden) return;
+  const dpr = globalThis.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+  if (!w || !h) return;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const g = c.getContext('2d'), css = getComputedStyle(document.documentElement);
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  const ink = css.getPropertyValue('--display-ink').trim(), dim = css.getPropertyValue('--display-dim').trim(), accent = css.getPropertyValue('--display-accent').trim();
+  if (!wave.peaks) { g.fillStyle = dim; g.globalAlpha = .5; g.fillRect(0, h / 2 - .5, w, 1); g.globalAlpha = 1; return; }
+  const bar = 2, gap = 1, n = Math.max(1, Math.floor(w / (bar + gap)));
+  for (let i = 0; i < n; i++) {
+    const a = Math.floor(i / n * wave.peaks.length), b = Math.max(a + 1, Math.floor((i + 1) / n * wave.peaks.length));
+    let m = 0; for (let j = a; j < b; j++) m = Math.max(m, wave.peaks[j]);
+    const bh = Math.max(1, m * (h - 2));
+    const played = i / n < wave.progress;
+    g.fillStyle = played ? ink : dim;
+    g.globalAlpha = played ? 1 : .5;
+    g.fillRect(i * (bar + gap), (h - bh) / 2, bar, bh);
+  }
+  g.globalAlpha = 1;
+  if (wave.progress > 0 && wave.progress < 1) { g.fillStyle = accent; g.fillRect(Math.round(wave.progress * w) - 1, 0, 2, h); }
+}
+
+let token = 0, playing = null;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function stopAll() {
+  token++;
+  player.pause();
+  if ('speechSynthesis' in globalThis) speechSynthesis.cancel();
+  playing = null;
+  setActive(null);
+  if (wave.progress) { wave.progress = 0; drawWave(); }
+  if (!busy && $('#status').classList.contains('busy')) setStatus('');
+}
+async function playRecording(id) {
+  const mine = token;
+  let a;
+  try { a = await loadAudio(id); } catch (e) { setStatus(`Could not play the recording: ${why(e)}`, 'fail'); return false; }
+  if (mine !== token) return false;
+  playing = 'said';
+  if (lastResult?.clip.id === id) setActive('said');
+  await new Promise(resolve => {
+    let raf = 0;
+    const tick = () => {
+      if (wave.id === id && player.duration) { wave.progress = player.currentTime / player.duration; drawWave(); }
+      raf = requestAnimationFrame(tick);
+    };
+    const done = () => { player.onended = player.onerror = player.onpause = null; cancelAnimationFrame(raf); resolve(); };
+    player.onended = player.onerror = player.onpause = done;
+    player.src = a.url;
+    player.play().then(tick).catch(e => { setStatus(`Could not play the recording: ${e.message || e}`, 'fail'); done(); });
+  });
+  if (wave.id === id) { wave.progress = 0; drawWave(); }
+  if (mine !== token) return false;
+  playing = null;
+  setActive(null);
+  return true;
+}
+
+let voices = [];
+function loadVoices() {
+  voices = 'speechSynthesis' in globalThis ? speechSynthesis.getVoices().filter(v => v.localService && v.lang.toLowerCase().startsWith('en')) : [];
+  const keep = $('#voice').value;
+  $('#voice').replaceChildren(...voices.map(v => new Option(v.name, v.voiceURI)));
+  if (!voices.length) $('#voice').append(new Option('No voice installed', ''));
+  $('#voice').value = voices.some(v => v.voiceURI === keep) ? keep : (voices.find(v => v.default) || voices[0])?.voiceURI || '';
+  $('#voicehelp').hidden = voices.length > 0;
+}
+function spokenWords(side) { return side.ops.filter(o => o.op !== 'del').map(o => o.hyp); }
+function say(words, onWord) {
+  const v = voices.find(v => v.voiceURI === $('#voice').value);
+  if (!words.length || !v) return Promise.resolve();
+  const text = words.join(' ');
+  const starts = []; let at = 0;
+  for (const w of words) { starts.push(at); at += w.length + 1; }
+  return new Promise(resolve => {
+    const u = new SpeechSynthesisUtterance(text);
+    u.voice = v;
+    u.rate = 0.95;
+    if (onWord) u.onboundary = e => {
+      if (e.name && e.name !== 'word') return;
+      let i = 0; while (i + 1 < starts.length && starts[i + 1] <= e.charIndex) i++;
+      onWord(i);
+    };
+    const guard = setTimeout(resolve, 3000 + text.length * 150);
+    u.onend = u.onerror = () => { clearTimeout(guard); resolve(); };
+    speechSynthesis.speak(u);
+  });
+}
+async function readRow(key, mine) {
+  const row = key === 'stock' ? 'stock' : 'model', side = lastResult[key];
+  playing = row; setActive(row);
+  const words = spokenWords(side);
+  if (!words.length) await sleep(900);
+  else await say(words, i => { if (mine === token) markWord(row, i); });
+  if (mine !== token) return false;
+  setActive(null); playing = null;
+  return true;
+}
+async function readAnswers(mine) {
+  if (!voices.length) { setStatus('No English voice is installed, so the answers cannot be read aloud. See How this works.', 'fail'); return; }
+  await sleep(450);
+  if (mine !== token || !(await readRow('stock', mine))) return;
+  await sleep(550);
+  if (mine !== token) return;
+  await readRow('speaker', mine);
+}
+async function playAll() {
+  if (!lastResult) return;
+  stopAll();
+  const mine = token;
+  if (!(await playRecording(lastResult.clip.id)) || mine !== token) return;
+  await readAnswers(mine);
+}
+function hearRow(key) {
+  if (!lastResult) return;
+  if (!voices.length) { setStatus('No English voice is installed, so the answers cannot be read aloud. See How this works.', 'fail'); return; }
+  stopAll();
+  readRow(key, token);
+}
+function nextClip() {
+  const list = speakerClips();
+  if (!list.length || busy) return;
+  const i = list.findIndex(c => c.id === current);
+  decodeClip(list[(i + 1) % list.length].id);
+}
+
+const MAX_TRY_S = 8;
+const mic = { stream: null, ctx: null, node: null, chunks: [], started: 0, timer: null, count: 0 };
+let tryData = null;
+function liveWave() {
+  const n = mic.chunks.reduce((a, c) => a + c.length, 0);
+  if (!n) return;
+  const all = new Float32Array(n);
+  let o = 0;
+  for (const c of mic.chunks) { all.set(c, o); o += c.length; }
+  const full = Math.max(n, Math.round(MAX_TRY_S * mic.ctx.sampleRate));
+  const bins = Math.max(1, Math.round(480 * n / full));
+  wave.peaks = new Float32Array(480);
+  wave.peaks.set(peaks(all, bins));
+  wave.progress = 0;
+  drawWave();
+}
+async function startTry() {
+  if (!state?.loaded || busy || mic.stream || tour.on) return;
+  stopAll();
+  try {
+    if (globalThis.PiMic?.active) {
+      ({ stream: mic.stream, ctx: mic.ctx, node: mic.node } = await PiMic.open());
+    } else {
+      mic.stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      mic.ctx = new AudioContext();
+      await mic.ctx.audioWorklet.addModule('/static/recorder-worklet.js');
+      mic.node = new AudioWorkletNode(mic.ctx, 'capture');
+      mic.ctx.createMediaStreamSource(mic.stream).connect(mic.node);
+    }
+    mic.chunks = [];
+    mic.node.port.onmessage = e => { if (e.data.pcm) mic.chunks.push(e.data.pcm); };
+    mic.node.port.postMessage('start');
+  } catch (e) {
+    releaseMic();
+    setStatus(`The microphone is not available: ${e.message || e}`, 'fail');
+    return;
+  }
+  mic.started = performance.now();
+  clearResult(); current = null; keepFocus(drawClips);
+  $('#transport').hidden = false; wave.id = null; wave.peaks = null; drawWave();
+  showEmpty('Speak now.', `Say a short sentence, then press Stop. It stops by itself after ${MAX_TRY_S} seconds.`);
+  setStatus('Recording from the microphone…', 'busy');
+  mic.timer = setInterval(() => {
+    drawControls(); liveWave();
+    if (performance.now() - mic.started >= MAX_TRY_S * 1000) finishTry();
+  }, 100);
+  drawControls();
+}
+function releaseMic() {
+  clearInterval(mic.timer); mic.timer = null;
+  try { mic.node?.port.postMessage('stop'); } catch (_) {  }
+  for (const tr of mic.stream?.getTracks() || []) tr.stop();
+  mic.ctx?.close?.().catch?.(() => {});
+  mic.stream = mic.ctx = mic.node = null;
+}
+function cancelTry() {
+  releaseMic(); mic.chunks = [];
+  drawControls();
+  showEmpty('Recording cancelled.', 'Press Try your voice to record again.');
+  setStatus('');
+}
+async function finishTry() {
+  if (!mic.stream) return;
+  const rate = mic.ctx.sampleRate, chunks = mic.chunks;
+  releaseMic(); mic.chunks = [];
+  const blob = encodeWav(chunks, rate);
+  const id = `try:${++mic.count}`;
+  const entry = { url: URL.createObjectURL(blob), peaks: null };
+  try {
+    decoderCtx ||= new (globalThis.AudioContext || globalThis.webkitAudioContext)();
+    entry.peaks = peaks((await decoderCtx.decodeAudioData(await blob.arrayBuffer())).getChannelData(0), 480);
+  } catch (_) {  }
+  audioCache.set(id, Promise.resolve(entry));
+  wave.id = id; wave.peaks = entry.peaks; wave.progress = 0; drawWave();
+  setBusy(true);
+  setStatus('Both models are listening…', 'busy');
+  showEmpty('Both models are writing down what they hear.', 'This takes a second or two.');
+  let r;
+  try {
+    const fd = new FormData();
+    fd.append('audio', blob, 'try.wav');
+    const resp = await fetch('/api/compare/try', { method: 'POST', body: fd });
+    if (!resp.ok) throw new Error(await resp.text());
+    r = await resp.json();
+  } catch (e) {
+    setBusy(false);
+    setStatus(`Could not transcribe: ${why(e)}`, 'fail');
+    showEmpty('Nothing came back.', 'Try again a little closer to the microphone.');
+    return;
+  }
+  setBusy(false);
+  renderTry(id, r);
+  setStatus('');
+}
+function toggleTry() { if (mic.stream) finishTry(); else startTry(); }
+const asOps = text => (text || '').split(/\s+/).filter(Boolean).map(w => ({ op: 'ok', ref: null, hyp: w }));
+function drawTry(d) {
+  const el = $('#align');
+  const words = (row, side) => side.ops.length
+    ? side.ops.map((o, i) => `<span class="c" data-row="${row}" data-w="${i}">${escapeHtml(o.hyp)}</span>`).join(' ')
+    : '<span class="c" data-row="' + row + '">(nothing)</span>';
+  el.className = 'cmp-align rows';
+  el.style.removeProperty('grid-template-columns');
+  el.innerHTML = label('said', 'You', 'Play your recording') + '<p class="line"><span class="c" data-row="said">your recording</span></p>' +
+    label('stock', 'Standard', "Hear the standard model's answer") + `<p class="line">${words('stock', d.stock)}</p>` +
+    label('model', escapeHtml(mineLabel(d.speaker)), "Hear the trained model's answer") + `<p class="line">${words('model', d.speaker_side)}</p>`;
+}
+function renderTry(id, r) {
+  const stock = { text: r.stock.text, ops: asOps(r.stock.text) }, mine = { text: r.mine.text, ops: asOps(r.mine.text) };
+  lastResult = { try: true, clip: { id, speaker: r.speaker, text: null }, stock, speaker: mine };
+  tryData = { speaker: r.speaker, stock, speaker_side: mine };
+  alignData = null;
+  const el = $('#align');
+  el.removeAttribute('data-active'); el.classList.remove('stale'); el.hidden = false;
+  $('#empty').hidden = true; $('#key').hidden = true; $('#results').hidden = true;
+  $('#note').hidden = false;
+  $('#note').textContent = (state?.custom ? 'Not scored: there is no reference text for your voice. '
+    : `Not scored: there is no reference text for your voice. The model for ${r.speaker} was trained on one person's speech, so it may do worse on yours than the standard model. `) +
+    `Each answer was written in about ${((r.stock.latency_ms + r.mine.latency_ms) / 2000).toFixed(2)} s on this device.`;
+  layoutAlign();
+  $('#verdict').textContent = '';
+  $('#alignsr').textContent = `The standard model wrote: ${r.stock.text || 'nothing'}. ${mineSubject(r.speaker)} wrote: ${r.mine.text || 'nothing'}.`;
+  $('#replay').disabled = false;
+}
+
+const tour = { on: false };
+async function tourPause(ms) {
+  for (let t = 0; t < ms && tour.on; t += 100) await sleep(100);
+}
+function stopTour() {
+  if (!tour.on) return;
+  tour.on = false;
+  stopAll();
+  setStatus('Tour stopped.');
+  drawControls();
+}
+async function runTour() {
+  if (tour.on || busy || mic.stream || !availableSpeakers().length) return;
+  tour.on = true;
+  drawControls();
+  setStatus('Tour running. Press any key or click to stop.', 'busy');
+  while (tour.on) {
+    const speakers = availableSpeakers();
+    if (!speakers.length) break;
+    if (!speakers.some(s => s.id === state.loaded)) await chooseSpeaker(speakers[0].id);
+    if (!tour.on) break;
+    const list = speakerClips();
+    let i = list.findIndex(c => c.id === current) + 1;
+    for (; i < list.length && tour.on; i++) {
+      await decodeClip(list[i].id);
+      if (!tour.on || lastResult?.clip.id !== list[i].id) break;
+      setStatus('Tour running. Press any key or click to stop.', 'busy');
+      await playAll();
+      await tourPause(voices.length ? 2500 : 5000);
+    }
+    if (!tour.on) break;
+    const at = speakers.findIndex(s => s.id === state.loaded);
+    const next = speakers[(at + 1) % speakers.length];
+    current = null;
+    if (next.id !== state.loaded) await chooseSpeaker(next.id);
+  }
+  if (tour.on) stopTour();
+}
+
+if ('speechSynthesis' in globalThis) speechSynthesis.onvoiceschanged = loadVoices;
+loadVoices();
+$('#recheck').addEventListener('click', loadVoices);
+$('#playrec').addEventListener('click', () => { if (wave.id) { stopAll(); playRecording(wave.id); } });
+$('#wave').addEventListener('click', () => { if (wave.id) { stopAll(); playRecording(wave.id); } });
+$('#replay').addEventListener('click', playAll);
+$('#nextclip').addEventListener('click', nextClip);
+$('#resettotals').addEventListener('click', () => {
+  totals.clips = totals.ref = totals.stock = totals.mine = 0;
+  scored.clear(); saveTotals(); renderTotals();
+});
+$('#trybtn').addEventListener('click', toggleTry);
+$('#tourbtn').addEventListener('click', () => (tour.on ? stopTour() : runTour()));
+$('#modelpick').addEventListener('change', () => {
+  if (!state) return;
+  if (state.loaded) chooseSpeaker(state.loaded);
+  else { keepFocus(drawSpeakers); drawControls(); }
+});
+$('#aboutbtn').addEventListener('click', () => $('#about').showModal());
+$('#aboutclose').addEventListener('click', () => $('#about').close());
+
+document.addEventListener('keydown', e => {
+  if (tour.on) { e.preventDefault(); stopTour(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey || $('#about').open) return;
+  if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+  if (e.key === 'Escape') { if (mic.stream) cancelTry(); stopAll(); return; }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    const picks = $$('#clips .pick'), i = picks.indexOf(document.activeElement);
+    if (!picks.length) return;
+    e.preventDefault();
+    const j = i < 0 ? 0 : Math.max(0, Math.min(picks.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)));
+    picks[j].focus();
+    return;
+  }
+  if (e.repeat) return;
+  const k = e.key.toLowerCase();
+  if (['1', '2', '3'].includes(k) && state) { const s = state.speakers[+k - 1]; if (s) chooseSpeaker(s.id); }
+  else if (k === 'n') nextClip();
+  else if (k === 'p') playAll();
+  else if (k === 'r') toggleTry();
+  else if (k === 't') runTour();
+});
+document.addEventListener('pointerdown', e => { if (tour.on && !e.target.closest('#tourbtn')) stopTour(); }, true);
+
+refresh().catch(e => { setStatus(`Could not reach the server: ${e.message || e}`, 'fail'); showEmpty('The demo is not running.', 'Check that willspeak is running, then reload this page.'); });
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+* text=auto eol=lf
+
+*.bat  text eol=crlf
+*.ps1  text eol=crlf
+*.sh   text eol=lf
+
+*.wav  binary
+*.npz  binary
+*.db   binary
+*.pdf  binary
+*.zip  binary
+*.tgz  binary
+
+app/src/willspeak/models/*.npz  -filter -diff -merge -text
+

@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Record · WillSpeak</title>
+<script src="/static/common.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="app-shell page-record">
+<a class="skip-link" href="#main-content">Skip to content</a>
+<header class="app-sidebar">
+  <a class="app-brand" href="/live" aria-label="WillSpeak home">
+    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square" focusable="false"><path d="M4 10v4m4-7v10m4-13v16m4-13v10m4-7v4"/></svg></span>
+    <span class="brand-copy"><strong>WillSpeak</strong></span>
+  </a>
+  <nav class="app-nav" aria-label="Main navigation">
+    <a href="/live"><span class="nav-index" aria-hidden="true">01</span><span class="nav-label">Speak</span></a>
+    <a href="/" class="on" aria-current="page"><span class="nav-index" aria-hidden="true">02</span><span class="nav-label">Record</span></a>
+    <a href="/review"><span class="nav-index" aria-hidden="true">03</span><span class="nav-label">Review</span><span class="nav-badge" data-nav-badge hidden></span></a>
+    <a href="/coverage"><span class="nav-index" aria-hidden="true">04</span><span class="nav-label">Coverage</span></a>
+    <a href="/compare"><span class="nav-index" aria-hidden="true">05</span><span class="nav-label">Compare</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <label for="theme-select">Theme</label>
+    <select id="theme-select" data-theme-select aria-label="Color theme">
+      <option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option>
+    </select>
+  </div>
+</header>
+<main class="wrap app-main" id="main-content" tabindex="-1">
+  <div class="page-header">
+    <div class="page-title"><div class="page-kicker">02 / Voice collection</div><h1>Record</h1></div>
+    <p class="page-description">Collect recorded words and phrases, one session at a time.</p>
+  </div>
+
+  <div class="page-tools card session-tools">
+    <div id="sessinfo" class="session-status">No active session</div>
+    <div class="page-actions">
+      <button id="endbtn" class="bad" style="display:none">End session</button>
+      <div id="endform" class="row end-session-form" style="display:none">
+        <div><label for="e_self">Speech now · 0–10</label><input id="e_self" type="number" min="0" max="10" step="1"></div>
+        <div><label for="e_fatigue">Fatigue now · 0–10</label><input id="e_fatigue" type="number" min="0" max="10" step="1"></div>
+        <button id="endgo" class="bad">Finish session</button>
+        <span class="tiny muted">Complete the end-of-session probe first.</span>
+      </div>
+    </div>
+  </div>
+
+  <details class="card guide-card">
+    <summary>Recording guide</summary>
+    <ol class="guide-steps">
+      <li><span class="step-number">01</span><h3>Record</h3><p>Hold <kbd>Space</kbd> while the speaker says the prompt. Release to save.</p></li>
+      <li><span class="step-number">02</span><h3>Review</h3><p>Listen to each take and confirm its words. Rejected takes stay saved.</p></li>
+      <li><span class="step-number">03</span><h3>Back up</h3><p>Back up after each session. Use Coverage to find the next phrases to record.</p></li>
+    </ol>
+  </details>
+
+  <section class="card" id="setup" aria-labelledby="setup-title">
+    <div class="setup-intro"><span class="page-kicker">Session setup</span><h2 id="setup-title">Set up the session</h2><p>Choose a microphone and record today’s conditions. Leave ratings blank if they were not asked.</p><p class="tiny muted">Keep the microphone in the same position each session.</p></div>
+    <div class="setup-fields">
+    <div class="grid field-grid">
+      <div><label for="f_mic">Microphone</label><select id="f_mic"></select><p class="field-help">Choose the microphone you use for recording.</p></div>
+      <div><label for="f_cond">Today’s condition</label><select id="f_cond"><option value="good_day">Good day</option><option value="unknown" selected>Typical / not sure</option><option value="tired">Tired</option><option value="bad_day">Bad day</option></select><p class="field-help">Record across different days and conditions.</p></div>
+    </div>
+    <div class="grid field-grid">
+      <div><label for="f_self">Speech rating</label><input id="f_self" type="number" min="0" max="10" step="1" placeholder="Leave blank if not asked"><p class="field-help">Ask the speaker: 0 = worst, 10 = best.</p></div>
+      <div><label for="f_fatigue">Fatigue rating</label><input id="f_fatigue" type="number" min="0" max="10" step="1" placeholder="Leave blank if not asked"><p class="field-help">0 = fresh, 10 = exhausted.</p></div>
+      <div><label for="f_sev">Rater’s assessment</label><select id="f_sev"><option value="">Not rated</option><option value="typical">Typical</option><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe</option><option value="profound">Profound</option></select><p class="field-help">Use the same rater each session.</p></div>
+      <div><label for="f_rater">Rater’s name</label><input id="f_rater" placeholder="e.g. Mom"><p class="field-help">Helps keep ratings consistent.</p></div>
+    </div>
+    <details class="optional-details">
+      <summary>Session label and room <span class="muted">· optional</span></summary>
+      <div class="grid field-grid"><div><label for="f_label">Session label</label><input id="f_label" placeholder="e.g. Afternoon, session 4"></div><div><label for="f_room">Room</label><input id="f_room" placeholder="e.g. Living room, curtains closed"></div></div>
+    </details>
+    <div class="page-actions setup-actions"><button class="primary" id="startbtn">Start session</button><span class="tiny muted">Check that the level meter moves before the first take.</span></div>
+    </div>
+  </section>
+
+  <div id="rec" style="display:none">
+    <div class="cols record-grid">
+      <div class="record-workspace">
+        <div class="promptbox">
+          <div class="row"><span class="pill" id="pset">-</span><span class="tiny muted" id="ptakes"></span><div class="spacer"></div><span class="tiny muted" id="pgain"></span></div>
+          <div id="ptext">-</div><div id="pphones"></div>
+        </div>
+        <section class="card recording-controls" aria-label="Recording controls">
+          <div class="section-heading"><h2>Capture</h2><span class="tiny muted">Microphone level</span></div>
+          <div class="meter" id="meter"><i id="meterbar"></i><div class="zone" id="zone"></div><span class="lbl" id="meterlbl">-</span></div>
+          <p class="field-help">Aim for the shaded band: −23 to −18 dBFS RMS.</p>
+          <button id="recbtn">Hold <kbd>Space</kbd> to record</button>
+          <div class="row recording-actions"><button id="skipbtn">Skip <kbd>S</kbd></button><button id="retakebtn" disabled>Retake last <kbd>R</kbd></button><button id="probebtn" title="Record the same ten words at the start and end of a session to compare speech as fatigue changes.">10-word probe</button></div>
+          <label class="row toggle-option"><input type="checkbox" id="toggle_mode">Click to start and stop instead of holding</label>
+          <div id="qcmsg" aria-live="polite"></div>
+          <p class="storage-note tiny muted">Takes save to <span class="mono" id="datadir">the data folder</span> when uploaded. <a href="/review">Review recordings</a> during a break. Review and export keep the original audio.</p>
+        </section>
+      </div>
+      <aside class="record-aside" aria-label="Session progress and prompts">
+        <section class="card">
+          <div class="section-heading"><h2>Collection</h2></div>
+          <div class="stats"><div class="stat"><div class="v" id="s_clips">0</div><div class="k">recordings</div></div><div class="stat"><div class="v" id="s_dur">0s</div><div class="k">usable audio</div></div></div>
+          <div class="progress-item"><div class="row tiny muted"><span>300-recording goal</span><div class="spacer"></div><span id="s_p1">0%</span></div><div class="bar"><i id="b1"></i></div></div>
+          <div class="progress-item"><div class="row tiny muted"><span>1.5-hour recording goal</span><div class="spacer"></div><span id="s_p2">0%</span></div><div class="bar"><i id="b2"></i></div></div>
+          <div class="progress-item"><div class="row tiny muted"><span>Sound-pair coverage</span><div class="spacer"></div><span id="s_p3">0%</span></div><div class="bar"><i id="b3"></i></div></div>
+        </section>
+        <section class="card">
+          <div class="section-heading"><h2>Prompt queue</h2></div><ul class="queue" id="queue"></ul>
+          <div class="row"><select id="setfilter" aria-label="Prompt sets"><option value="">All sets (priority order)</option><option value="critical">Critical only</option><option value="functional">Functional only</option><option value="phonetic">Phonetic only</option></select><button id="refreshq" aria-label="Refresh prompt queue">Refresh</button></div>
+        </section>
+        <section class="card">
+          <h2>Add a prompt</h2><label for="newprompt">Word or phrase</label><input id="newprompt" placeholder="Enter a word or phrase…">
+          <div class="row prompt-add"><select id="newset" aria-label="New prompt set"><option value="functional">Everyday phrase</option><option value="critical">Essential phrase</option><option value="custom">Custom</option></select><button id="addbtn">Add</button></div><div id="addmsg" class="tiny" aria-live="polite"></div>
+        </section>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<script>window.CPV = document.querySelector('script[src*="common.js"]')?.src.split("v=")[1] || "0";</script>
+<script>
+let ctx, node, source, stream, sessionId = null;
+let recording = false, chunks = [], queue = [], qi = 0, busy = false;
+let lastTake = null;
+let pendingUpload = null;
+let recTimer = null;
+let recPrompt = null;
+let uploadChain = Promise.resolve();
+const MAX_TAKE_MS = 25000;
+
+async function initAudio(deviceId) {
+  if (recording) await stopRec();
+  if (source) source.disconnect();
+  if (node) { node.port.onmessage = null; node.disconnect(); }
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      deviceId: deviceId ? { exact: deviceId } : undefined,
+      echoCancellation: false, noiseSuppression: false, autoGainControl: false,
+      channelCount: 1,
+    }
+  });
+  if (!ctx) {
+    ctx = new AudioContext();
+    await ctx.audioWorklet.addModule('/static/recorder-worklet.js?v=' + (window.CPV || '0'));
+  }
+  source = ctx.createMediaStreamSource(stream);
+  node = new AudioWorkletNode(ctx, 'capture');
+  node.port.onmessage = (e) => {
+    if (e.data.meter) drawMeter(e.data.meter);
+    if (e.data.pcm && recording) chunks.push(e.data.pcm);
+  };
+  source.connect(node);
+  await ctx.resume();
+}
+
+let meterHold = 0;
+function drawMeter({ peak, rms }) {
+  const db = 20 * Math.log10(Math.max(rms, 1e-6));
+  const pct = Math.max(0, Math.min(1, (db + 60) / 60)) * 100;
+  const bar = $('#meterbar');
+  bar.style.width = pct + '%';
+  bar.className = peak >= 0.99 ? 'clip' : (db > -14 ? 'hot' : '');
+  if (Date.now() - meterHold > 100) {
+    meterHold = Date.now();
+    $('#meterlbl').textContent = db.toFixed(0) + ' dBFS';
+  }
+}
+function drawZone() {
+  const l = (-23 + 60) / 60 * 100, r = (-18 + 60) / 60 * 100;
+  const z = $('#zone'); z.style.left = l + '%'; z.style.width = (r - l) + '%';
+}
+
+async function listMics() {
+  try {
+    const permission = await navigator.mediaDevices.getUserMedia({ audio: true });
+    permission.getTracks().forEach(track => track.stop());
+  } catch (e) {}
+  const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+  $('#f_mic').innerHTML = devs.map(d => `<option value="${escapeHtml(d.deviceId)}">${escapeHtml(d.label || 'Microphone')}</option>`).join('');
+}
+
+async function loadQueue() {
+  const f = $('#setfilter').value;
+  const r = await get('/api/next?n=30' + (f ? '&prompt_set=' + f : ''));
+  queue = r.prompts; qi = 0; renderQueue(); showPrompt();
+}
+function renderQueue() {
+  $('#queue').innerHTML = queue.slice(qi, qi + 12).map((p, i) =>
+    `<li class="${i === 0 ? 'cur' : ''}"><span class="pill ${escapeHtml(p.prompt_set)}">${escapeHtml(p.prompt_set[0])}</span>
+     <span class="t">${escapeHtml(p.text)}</span>
+     <span class="muted tiny">${p.takes_done}/${p.target_takes}</span></li>`).join('');
+}
+function cur() { return queue[qi]; }
+function showPrompt() {
+  const p = cur();
+  if (!p) { $('#ptext').textContent = 'Queue empty. Refresh or add prompts.'; return; }
+  const el = $('#ptext');
+  el.textContent = p.text;
+  el.className = p.kind === 'word' ? 'word' : '';
+  $('#pset').textContent = p.prompt_set;
+  $('#pset').className = 'pill ' + p.prompt_set;
+  $('#ptakes').textContent = `take ${p.takes_done + 1} of ${p.target_takes}`;
+  $('#pgain').textContent = p.diphone_gain > 0 ? `+${p.diphone_gain} new diphones` : '';
+  $('#pphones').textContent = (p.phones || []).filter(x => x !== '_').join(' ');
+  renderQueue();
+}
+function advance() { qi++; if (qi >= queue.length) loadQueue(); else showPrompt(); }
+
+function startRec() {
+  if (recording || !cur()) return;
+  recPrompt = cur();
+  chunks = []; recording = true;
+  node.port.postMessage('start');
+  $('#recbtn').classList.add('live');
+  $('#recbtn').innerHTML = 'Recording… release to stop';
+  $('#qcmsg').innerHTML = '';
+  recTimer = setTimeout(() => {
+    if (recording) {
+      stopRec();
+      $('#qcmsg').insertAdjacentHTML('afterbegin',
+        '<div class="msg warn">Auto-stopped at the 25-second clip limit.</div>');
+    }
+  }, MAX_TAKE_MS);
+}
+async function stopRec() {
+  if (!recording) return;
+  recording = false;
+  clearTimeout(recTimer);
+  node.port.postMessage('stop');
+  $('#recbtn').classList.remove('live');
+  $('#recbtn').innerHTML = 'Hold <kbd>Space</kbd> to record';
+  const p = recPrompt;
+  recPrompt = null;
+  if (!chunks.length || !p) {
+    chunks = [];
+    $('#qcmsg').innerHTML =
+      '<div class="msg warn">Nothing was captured - hold Space a moment longer.</div>';
+    return;
+  }
+  const blob = encodeWav(chunks, ctx.sampleRate);
+  chunks = [];
+
+  p.takes_done++;
+  if (p.takes_done >= p.target_takes) advance(); else showPrompt();
+  uploadChain = uploadChain.then(() => uploadTake(blob, p)).catch(() => {});
+}
+
+async function uploadTake(blob, p) {
+  busy = true;
+  try {
+    const fd = new FormData();
+    fd.append('audio', blob, 'clip.wav');
+    fd.append('session_id', sessionId);
+    fd.append('prompt_text', p.text);
+    if (p.prompt_id) fd.append('prompt_id', p.prompt_id);
+    fd.append('quality_retry', p.qualityRetries || 0);
+    const r = await fetch('/api/clip', { method: 'POST', body: fd });
+    if (!r.ok) throw new Error(await r.text());
+    const res = await r.json();
+    pendingUpload = null;
+    lastTake = { clipId: res.clip_id, prompt: p };
+    $('#retakebtn').disabled = false;
+    showQC(res.qc);
+    updateStats(res.totals);
+    const gate = res.qc.gate;
+    if (gate && !gate.keep && !gate.kept_after_retry) p.qualityRetries = (p.qualityRetries || 0) + 1;
+    else if (res.qc.ok) p.qualityRetries = 0;
+    if (!res.qc.ok) {
+      p.takes_done = Math.max(0, p.takes_done - 1);
+      const idx = queue.indexOf(p);
+      if (idx >= 0 && !recording) { qi = idx; showPrompt(); }
+    }
+  } catch (e) {
+    pendingUpload = { blob, prompt: p };
+    $('#qcmsg').innerHTML =
+      `<div class="msg bad">Upload failed: ${escapeHtml(e.message)}. The take is still available. ` +
+      `<button id="retrybtn" style="margin-left:8px;padding:3px 12px">Retry upload</button></div>`;
+    $('#retrybtn').onclick = () => uploadTake(pendingUpload.blob, pendingUpload.prompt);
+  }
+  busy = false;
+}
+function showQC(qc) {
+  let h = '';
+  for (const e of qc.errors) h += `<div class="msg bad">${escapeHtml(e)}</div>`;
+  for (const w of qc.warnings) h += `<div class="msg warn">${escapeHtml(w)}</div>`;
+  if (qc.ok && !qc.warnings.length)
+    h = `<div class="msg ok">Saved · ${qc.duration_s.toFixed(1)} s · ${qc.rms_dbfs} dBFS · SNR ${qc.est_snr_db} dB` +
+        (qc.gate ? ' · recording quality good' : '') + '</div>';
+  else if (!qc.ok && qc.gate && !qc.gate.keep)
+    h += '<div class="msg tiny">Say the same prompt again. If the next take has the same problem, it is kept anyway.</div>';
+  $('#qcmsg').innerHTML = h;
+}
+async function retake() {
+  if (!lastTake) return;
+  await post(`/api/clip/${lastTake.clipId}/review`, { transcript: '', status: 'rejected' });
+  const p = lastTake.prompt;
+  if (p.takes_done > 0) p.takes_done--;
+  const idx = queue.indexOf(p);
+  if (idx >= 0) qi = idx;
+  lastTake = null; $('#retakebtn').disabled = true;
+  showPrompt();
+  $('#qcmsg').innerHTML = '<div class="msg warn">Last take discarded. Go again.</div>';
+}
+
+async function updateStats(t) {
+  if (!t) t = (await get('/api/state')).totals;
+  navBadge(t);
+  $('#s_clips').textContent = t.accepted + t.pending;
+  $('#s_dur').textContent = fmtDur(t.usable_seconds + 0);
+  const n = t.accepted + t.pending, secs = t.total_seconds;
+  const p1 = Math.min(100, n / 300 * 100), p2 = Math.min(100, secs / 5400 * 100);
+  $('#b1').style.width = p1 + '%'; $('#s_p1').textContent = p1.toFixed(0) + '%';
+  $('#b2').style.width = p2 + '%'; $('#s_p2').textContent = p2.toFixed(0) + '%';
+  const c = await get('/api/coverage');
+  $('#b3').style.width = c.diphones_covered_pct + '%';
+  $('#s_p3').textContent = c.diphones_covered_pct + '%';
+}
+
+$('#startbtn').onclick = async () => {
+  await initAudio($('#f_mic').value);
+  const r = await post('/api/session/start', {
+    label: $('#f_label').value, condition: $('#f_cond').value,
+    mic: $('#f_mic').selectedOptions[0]?.textContent || '', room: $('#f_room').value,
+    self_rating: $('#f_self').value, fatigue: $('#f_fatigue').value,
+    rater: $('#f_rater').value, rater_severity: $('#f_sev').value,
+  });
+  sessionId = r.session_id;
+  $('#setup').style.display = 'none'; $('#rec').style.display = '';
+  $('#endbtn').style.display = ''; $('#sessinfo').textContent = 'session #' + sessionId;
+  drawZone(); await loadQueue(); await updateStats();
+};
+$('#endbtn').onclick = () => {
+  $('#endbtn').style.display = 'none'; $('#endform').style.display = '';
+};
+$('#endgo').onclick = async () => {
+  await post('/api/session/end', { session_id: sessionId, notes: '',
+    self_rating: $('#e_self').value, fatigue: $('#e_fatigue').value });
+  location.reload();
+};
+$('#probebtn').onclick = async () => {
+  const r = await get('/api/probe');
+  if (!r.prompts.length) { $('#qcmsg').innerHTML = '<div class="msg warn">No probe list. Add prompts/probe.txt and restart.</div>'; return; }
+  queue = r.prompts.map(p => ({ ...p, takes_done: 0, target_takes: 1, diphone_gain: 0, phones: [] }));
+  qi = 0; renderQueue(); showPrompt();
+  $('#qcmsg').innerHTML = '<div class="msg tiny">Probe: one take of each of the ' + queue.length + ' items, in this order. The queue comes back when it is done.</div>';
+};
+$('#skipbtn').onclick = advance;
+$('#retakebtn').onclick = retake;
+$('#refreshq').onclick = loadQueue;
+$('#setfilter').onchange = loadQueue;
+$('#addbtn').onclick = async () => {
+  const t = $('#newprompt').value.trim(); if (!t) return;
+  const r = await post('/api/prompt', { text: t, prompt_set: $('#newset').value });
+  $('#addmsg').innerHTML = r.duplicate
+    ? '<span class="muted">Already in the bank.</span>'
+    : (r.oov.length
+      ? `<span style="color:var(--warn)">Added. Not in CMUdict: ${escapeHtml(r.oov.join(', '))}. Coverage stats will ignore those words.</span>`
+      : '<span style="color:var(--ok)">Added.</span>');
+  $('#newprompt').value = '';
+  loadQueue();
+};
+
+const recbtn = $('#recbtn');
+const toggleMode = () => $('#toggle_mode').checked;
+recbtn.onmousedown = () => { if (!toggleMode()) startRec(); };
+recbtn.onmouseup = () => { if (!toggleMode()) stopRec(); };
+document.addEventListener('mouseup', () => { if (!toggleMode() && recording) stopRec(); });
+recbtn.onclick = () => { if (toggleMode()) recording ? stopRec() : startRec(); };
+recbtn.ontouchstart = (e) => { e.preventDefault(); if (!toggleMode()) startRec(); else recording ? stopRec() : startRec(); };
+recbtn.ontouchend = (e) => { e.preventDefault(); if (!toggleMode()) stopRec(); };
+
+document.addEventListener('keydown', (e) => {
+  if (['INPUT', 'TEXTAREA', 'SELECT', 'A'].includes(e.target.tagName) ||
+      (e.target.tagName === 'BUTTON' && e.target !== recbtn) || e.target.isContentEditable) return;
+  if (e.repeat) return;
+  if (e.code === 'Space') { e.preventDefault(); toggleMode() ? (recording ? stopRec() : startRec()) : startRec(); }
+  else if (recording) return;
+  else if (e.key === 's' || e.key === 'S') advance();
+  else if (e.key === 'r' || e.key === 'R') retake();
+});
+document.addEventListener('keyup', (e) => {
+  if (e.code === 'Space' && !toggleMode()) { e.preventDefault(); stopRec(); }
+});
+
+listMics();
+(async () => {
+  const st = await get('/api/state');
+  navBadge(st.totals);
+  if (st.data_dir) $('#datadir').textContent = st.data_dir;
+  if (st.session) {
+    sessionId = st.session.id;
+    await initAudio();
+    $('#setup').style.display = 'none'; $('#rec').style.display = '';
+    $('#endbtn').style.display = '';
+    $('#sessinfo').textContent = 'resumed session #' + sessionId;
+    drawZone(); await loadQueue(); await updateStats();
+  }
+})();
+</script></body></html>

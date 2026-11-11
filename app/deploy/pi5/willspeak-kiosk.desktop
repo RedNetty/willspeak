@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=willspeak kiosk
+Comment=Opens willspeak full-screen once the server answers
+Exec=/bin/bash @ROOT@/deploy/pi5/kiosk.sh @PAGE@
+X-GNOME-Autostart-enabled=true
+NoDisplay=false

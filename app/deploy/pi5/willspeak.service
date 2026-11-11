@@ -1,0 +1,19 @@
+[Unit]
+Description=willspeak server (recorder + Speak page)
+After=network.target sound.target
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@ROOT@
+Environment=PYTHONUNBUFFERED=1
+Environment=WILLSPEAK_ASR_THREADS=4
+Environment=WILLSPEAK_HOST=0.0.0.0
+Environment=WILLSPEAK_PARAKEET_DIR=@MODEL@
+ExecStartPre=+/bin/sh -c 'for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do [ -w "$g" ] && echo performance > "$g"; done; true'
+ExecStart=@ROOT@/.venv/bin/python @ROOT@/run.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

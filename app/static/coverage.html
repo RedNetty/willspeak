@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Coverage · WillSpeak</title>
+<script src="/static/common.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="app-shell page-coverage">
+<a class="skip-link" href="#main-content">Skip to content</a>
+<header class="app-sidebar">
+  <a class="app-brand" href="/live" aria-label="WillSpeak home">
+    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square" focusable="false"><path d="M4 10v4m4-7v10m4-13v16m4-13v10m4-7v4"/></svg></span>
+    <span class="brand-copy"><strong>WillSpeak</strong></span>
+  </a>
+  <nav class="app-nav" aria-label="Main navigation">
+    <a href="/live"><span class="nav-index" aria-hidden="true">01</span><span class="nav-label">Speak</span></a>
+    <a href="/"><span class="nav-index" aria-hidden="true">02</span><span class="nav-label">Record</span></a>
+    <a href="/review"><span class="nav-index" aria-hidden="true">03</span><span class="nav-label">Review</span><span class="nav-badge" data-nav-badge hidden></span></a>
+    <a href="/coverage" class="on" aria-current="page"><span class="nav-index" aria-hidden="true">04</span><span class="nav-label">Coverage</span></a>
+    <a href="/compare"><span class="nav-index" aria-hidden="true">05</span><span class="nav-label">Compare</span></a>
+  </nav>
+  <div class="sidebar-footer">
+    <label for="theme-select">Theme</label>
+    <select id="theme-select" data-theme-select aria-label="Color theme">
+      <option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option>
+    </select>
+  </div>
+</header>
+<main class="wrap app-main" id="main-content" tabindex="-1">
+  <div class="page-header">
+    <div class="page-title"><div class="page-kicker">04 / Voice collection</div><h1>Coverage</h1></div>
+    <p class="page-description">Find gaps in the recording collection and choose what to record next.</p>
+  </div>
+
+  <div class="page-tools card"><div class="tiny muted" id="lastbackup" aria-live="polite">Back up after each recording session.</div><div class="page-actions"><button id="backupbtn" class="primary">Back up everything</button><button id="exportbtn">Export corpus</button></div></div>
+  <section class="card coverage-overview" aria-labelledby="overview-title">
+    <div class="section-heading"><h2 id="overview-title">Collection summary</h2><a href="/">Record another phrase</a></div>
+    <div class="hero coverage-metrics">
+      <div class="metric-card"><div class="n" id="h_min">-</div><div class="k">usable minutes</div><div class="sub">From accepted recordings</div></div>
+      <div class="metric-card"><div class="n" id="h_utt">-</div><div class="k">accepted recordings</div><div class="sub">Confirmed in Review</div></div>
+      <div class="metric-card"><div class="n" id="h_di">-</div><div class="k">sound pairs covered</div><div class="sub" id="h_disub">Of the prompt bank</div></div>
+      <div class="metric-card"><div class="n" id="h_dir">-</div><div class="k">pairs recorded at least twice</div><div class="sub">Across accepted recordings</div></div>
+    </div>
+  </section>
+  <div class="coverage-grid">
+    <section class="card coverage-chart" aria-labelledby="sounds-title">
+      <div class="section-heading"><h2 id="sounds-title">Sound inventory</h2></div>
+      <p class="field-help">The least-recorded sounds come first. Hover over a sound for phrases you can try.</p>
+      <div class="viz-root"><div class="legend"><span><i class="swatch" style="background:var(--status-critical)"></i>Not recorded</span><span><i class="swatch" style="background:var(--status-warning)"></i>Under 5 recordings</span><span><i class="swatch" style="background:var(--series-1)"></i>Covered</span></div><div id="chart"></div></div>
+      <details class="optional-details"><summary>View sound counts as a table</summary><div class="table-scroll"><table id="ptable"></table></div></details>
+    </section>
+    <div class="coverage-aside">
+      <section class="card" aria-labelledby="next-title"><h2 id="next-title">Next phrases</h2><p class="field-help">These phrases add the most sound pairs that still need recordings.</p><div class="table-scroll"><table id="rec"></table></div><a class="button" href="/">Go to recording</a></section>
+      <section class="card" aria-labelledby="pairs-title"><h2 id="pairs-title">Missing sound pairs</h2><p class="field-help" id="dimiss"></p><div class="chips" id="dichips"></div></section>
+      <section class="card storage-card"><h2>Audio storage</h2><p class="field-help">Original recordings stay saved when you review or export them.</p><details><summary>Storage and backup details</summary><p class="tiny muted">All takes, including rejected ones, live in <span class="mono" id="datadir">the data folder</span> alongside <span class="mono">corpus.db</span>.</p><p class="tiny muted">Backups save the database and audio in <span class="mono">data/backups/</span>. Restore by unzipping a backup into an empty data folder.</p></details></section>
+    </div>
+  </div>
+  <section class="card" id="exportcard" style="display:none" aria-labelledby="export-title"><h2 id="export-title">Export details</h2><pre class="mono tiny" id="exportout" aria-live="polite"></pre></section>
+</main>
+<div class="tt" id="tt" role="tooltip"></div>
+
+<script>
+const STATUS = (n) => n === 0 ? 'critical' : (n < 5 ? 'warning' : 'good');
+const LABEL = { critical: 'never recorded', warning: 'thin', good: 'covered' };
+
+function chart(counts, examples) {
+  const rows = Object.entries(counts).sort((a, b) => a[1] - b[1] || a[0].localeCompare(b[0]));
+  const W = 900, rowH = 17, gap = 5, padL = 54, padR = 46, padT = 26;
+  const H = padT + rows.length * (rowH + gap);
+  const max = Math.max(5, ...rows.map(r => r[1]));
+  const plotW = W - padL - padR;
+  const x = v => (v / max) * plotW;
+
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(max * f))
+    .filter((v, i, a) => a.indexOf(v) === i);
+  let svg = `<svg id="svg" viewBox="0 0 ${W} ${H}" width="100%" height="${H}"
+    role="img" aria-label="Phoneme counts, ascending">`;
+  for (const t of ticks) {
+    svg += `<line x1="${padL + x(t)}" x2="${padL + x(t)}" y1="${padT - 8}" y2="${H}"
+      stroke="var(--gridline)" stroke-width="1"/>
+      <text x="${padL + x(t)}" y="${padT - 13}" fill="var(--text-muted)" font-size="10"
+      text-anchor="middle">${t}</text>`;
+  }
+  svg += `<line x1="${padL}" x2="${padL}" y1="${padT - 8}" y2="${H}"
+          stroke="var(--baseline)" stroke-width="1"/>`;
+
+  rows.forEach(([ph, n], i) => {
+    const y = padT + i * (rowH + gap);
+    const st = STATUS(n);
+    const w = Math.max(n === 0 ? 3 : 6, x(n));
+    const r = 4;
+    const d = n === 0
+      ? `<rect x="${padL}" y="${y}" width="3" height="${rowH}" fill="var(--status-critical)" opacity=".55"/>`
+      : `<path d="M${padL},${y} H${padL + w - r} a${r},${r} 0 0 1 ${r},${r}
+           V${y + rowH - r} a${r},${r} 0 0 1 -${r},${r} H${padL} Z"
+           fill="${st === 'good' ? 'var(--series-1)' : 'var(--status-' + st + ')'}"/>`;
+    svg += `<g class="bar" data-ph="${ph}" data-n="${n}" data-st="${st}">
+      <rect x="0" y="${y - 2}" width="${W}" height="${rowH + 4}" fill="transparent"/>
+      <text x="${padL - 9}" y="${y + rowH - 4}" fill="var(--text-secondary)" font-size="11"
+        text-anchor="end">${ph}</text>
+      ${d}
+      <text x="${padL + w + 7}" y="${y + rowH - 4}" fill="var(--text-muted)" font-size="11"
+        font-variant-numeric="tabular-nums">${n}</text>
+    </g>`;
+  });
+  svg += '</svg>';
+  $('#chart').innerHTML = svg;
+
+  const tt = $('#tt');
+  $$('#chart .bar').forEach(g => {
+    g.style.cursor = 'default';
+    g.onmousemove = (e) => {
+      const ph = g.dataset.ph, n = +g.dataset.n, st = g.dataset.st;
+      const ex = (examples[ph] || []);
+      tt.innerHTML = `<b>${ph} · ${n} token${n === 1 ? '' : 's'} · ${LABEL[st]}</b>` +
+        (ex.length ? `<div class="ex">Unrecorded prompts with this sound:<br>· ${ex.map(escapeHtml).join('<br>· ')}</div>`
+                   : (n === 0 ? '<div class="ex">No prompt in the bank contains it. Add one.</div>' : ''));
+      tt.style.display = 'block';
+      tt.style.left = Math.min(e.clientX + 14, innerWidth - 300) + 'px';
+      tt.style.top = (e.clientY + 14) + 'px';
+    };
+    g.onmouseleave = () => tt.style.display = 'none';
+  });
+
+  $('#ptable').innerHTML =
+    '<tr><th>Phone</th><th>Tokens</th><th>State</th></tr>' +
+    rows.map(([p, n]) => `<tr><td class="mono">${p}</td>
+      <td class="mono">${n}</td><td>${LABEL[STATUS(n)]}</td></tr>`).join('');
+}
+
+async function load() {
+  const [c, st] = await Promise.all([get('/api/coverage'), get('/api/state')]);
+  const t = st.totals;
+  navBadge(t);
+  $('#datadir').textContent = st.data_dir || 'the data folder';
+  if (st.backup && st.backup.last)
+    $('#lastbackup').textContent = 'last backup: ' + st.backup.last.replace('willspeak-backup-', '').replace('.zip', '');
+  $('#h_min').textContent = (t.usable_seconds / 60).toFixed(1);
+  $('#h_utt').textContent = t.accepted;
+  $('#h_di').textContent = c.diphones_covered_pct + '%';
+  $('#h_disub').textContent = `${c.diphones_covered} of ${c.diphones_in_bank} pairs`;
+  $('#h_dir').textContent = c.diphones_redundant_pct + '%';
+
+  chart(c.phone_counts, c.phone_examples);
+
+  $('#rec').innerHTML = '<tr><th>Prompt</th><th>Set</th><th style="text-align:right">New pairs</th></tr>' +
+    (c.recommendations.length
+      ? c.recommendations.map(r => `<tr><td>${escapeHtml(r.text)}</td>
+          <td><span class="pill ${escapeHtml(r.prompt_set)}">${escapeHtml(r.prompt_set)}</span></td>
+          <td class="mono" style="text-align:right">+${r.gain}</td></tr>`).join('')
+      : '<tr><td colspan="3" class="muted">No phrases to suggest right now. Record more examples, or add a new prompt.</td></tr>');
+
+  const miss = c.missing_diphones_sample || [];
+  $('#dimiss').textContent = miss.length
+    ? `${c.diphones_in_bank - c.diphones_covered} sound pairs still need a recording. Showing the first ${miss.length}; the suggested phrases above can help.`
+    : 'Every phoneme pair in the prompt bank has been recorded at least once.';
+  $('#dichips').innerHTML = miss.map(d => `<span class="chip">${d}</span>`).join('');
+}
+$('#backupbtn').onclick = async () => {
+  $('#backupbtn').disabled = true; $('#backupbtn').textContent = 'Backing up…';
+  try {
+    const r = await post('/api/backup', {});
+    $('#lastbackup').textContent = `saved ${r.file} (${(r.bytes / 1048576).toFixed(1)} MB)`;
+  } catch (e) {
+    $('#lastbackup').textContent = 'backup failed: ' + e.message;
+  }
+  $('#backupbtn').disabled = false; $('#backupbtn').textContent = 'Back up everything';
+};
+$('#exportbtn').onclick = async () => {
+  $('#exportcard').style.display = '';
+  $('#exportout').textContent = 'exporting…';
+  const r = await post('/api/export', { dev_frac: 0.1, test_frac: 0.1, trim: 'true' });
+  $('#exportout').textContent = JSON.stringify(r, null, 2);
+};
+load();
+</script></body></html>

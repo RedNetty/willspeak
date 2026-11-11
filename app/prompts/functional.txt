@@ -1,0 +1,52 @@
+# FUNCTIONAL SET -starter template. REPLACE THIS with his real vocabulary,
+# built with him and his family. This list is the product; the phonetic script
+# is only the generalization engine.
+# One prompt per line. Blank lines and # comments ignored.
+water
+coffee
+sandwich
+tomato
+chicken
+potato
+breakfast
+lunch
+dinner
+medicine
+television
+music
+phone
+computer
+outside
+upstairs
+downstairs
+blanket
+pillow
+glasses
+I want some water
+Can you turn the light on
+Can you turn the light off
+Turn the television on
+Turn it up
+Turn it down
+I would like a sandwich
+Not that one, the other one
+Can we go outside
+I want to sit up
+I want to lie down
+Can you move my arm
+Can you move my leg
+My chair needs charging
+I need my glasses
+What time is it
+Who is at the door
+I'm going to bed
+Good morning
+Good night
+I love you
+How was your day
+That's funny
+I don't like that
+That's my favorite
+Let me finish
+I have something to say
+Give me a minute

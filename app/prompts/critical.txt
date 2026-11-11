@@ -1,0 +1,29 @@
+# CRITICAL SET -highest-stakes utterances.
+# These get a closed-set classifier, NOT open-vocabulary ASR. Record many
+# repetitions of each (target 15-20), across good days and bad days.
+# Never run open ASR on "I'm in pain".
+yes
+no
+help
+stop
+wait
+I need the bathroom
+I'm in pain
+I'm hungry
+I'm thirsty
+I'm cold
+I'm hot
+I'm tired
+I can't breathe
+Call the doctor
+Call my mom
+Call my dad
+Something is wrong
+I don't understand
+Say that again
+Leave it
+I'm okay
+Not now
+Later
+Thank you
+Please

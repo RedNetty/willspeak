@@ -1,0 +1,16 @@
+# Fixed longitudinal probe (docs/plan.md).
+#
+# Record one take of every item at session start and again at session end.
+# Choose the list with the speaker before longitudinal recording begins.
+# Document any later change as a new measurement series. The API serves this
+# list in fixed order; the coverage scheduler does not reorder it.
+yes
+no
+water
+tomato
+banana
+potato
+open the door
+good morning
+help me
+I am okay

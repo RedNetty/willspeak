@@ -1,0 +1,741 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Speak · WillSpeak</title>
+<meta name="theme-color" content="#eaeae4">
+<script src="/static/common.js"></script>
+<script src="/static/pimic.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+</head><body class="live-page">
+
+<a class="skip-link" href="#conversation">Skip to conversation</a>
+<header class="conversation-header">
+  <a class="app-brand" href="/live" aria-label="WillSpeak conversation">
+    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square" focusable="false"><path d="M4 10v4m4-7v10m4-13v16m4-13v10m4-7v4"/></svg></span>
+    <span class="brand-copy"><strong>WillSpeak</strong></span>
+  </a>
+  <span class="live-label">01 / Conversation</span>
+  <div class="spacer"></div>
+  <button id="caretoggle" aria-controls="care" aria-expanded="false">Caregiver controls</button>
+</header>
+
+<main class="stage" id="conversation" tabindex="-1">
+  <div class="hyp" id="hypcard">
+    <div class="eyebrow">Speak</div>
+    <div id="hyptext" class="placeholder">Take your time.</div>
+    <p class="conversation-help" id="conversationhelp">Speak in your own time. No buttons needed.</p>
+    <div id="utterancehint"></div>
+  </div>
+  <div class="signal-panel">
+    <div id="state" class="preview" role="status" aria-live="polite">Getting ready…</div>
+    <div class="meterline" aria-hidden="true"><i id="meter"></i></div>
+  </div>
+  <div class="voice-phrases" aria-label="Spoken controls">
+    <span class="voice-phrases-label">Voice controls</span>
+    <span>Stop <b id="stopcue">…</b></span>
+    <span>Pause <b id="sleepcue">…</b></span>
+    <span>Resume <b id="wakecue">…</b></span>
+  </div>
+</main>
+
+<div id="care" role="dialog" aria-modal="true" aria-labelledby="caretitle">
+  <div id="carehead">
+    <div class="row"><div><div class="eyebrow">Device settings</div><h2 id="caretitle">Caregiver controls</h2></div><div class="spacer"></div><button id="careclose" class="primary">Back to conversation</button></div>
+    <p>Correct recent words or adjust the device. Settings apply to the next utterance; the speaker stays in control by voice.</p>
+    <div class="care-toolbar"><div class="theme-control"><label for="care-theme">Appearance</label><select id="care-theme" data-theme-select><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></div><span class="tiny muted">Press <kbd>Esc</kbd> to return to the conversation.</span></div>
+    <nav class="care-nav" aria-label="Caregiver tools"><a href="/">Record phrases</a><a href="/review">Review recordings</a><a href="/coverage">Recording progress</a><a href="/compare">Model comparison demo</a></nav>
+    <div id="caremessage" role="status"></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h2>How it speaks</h2>
+      <div class="cardnote">The voice everyone else hears, and how long he gets to take it back.</div>
+
+      <label>Hold before speaking aloud <span class="setval" id="v_speak_delay_s"></span></label>
+      <input type="range" id="s_speak_delay_s" min="0" max="5" step="0.5">
+      <div class="means" id="d_speak_delay_s"></div>
+      <div class="tradeoff">Longer gives him more room to catch a wrong sentence before anyone hears it,
+        but every reply lands that much later and conversation drags. <b>start here: 0 s</b> once you
+        trust it, 1&ndash;2 s while you are still testing.</div>
+
+      <label>Voice <select id="voice"></select></label>
+
+      <label>Speaking speed <span class="setval" id="v_rate"></span></label>
+      <input id="rate" type="range" min="0.5" max="1.3" step="0.05" value="0.95">
+      <div class="means" id="d_rate"></div>
+      <div class="tradeoff">Slower is easier for a stranger to follow in a noisy room; faster sounds
+        more like ordinary conversation. <b>start here: 0.95</b></div>
+
+      <label><input type="checkbox" id="s_vocab_override" style="width:auto"> Speak his own recorded wording instead of the transcript</label>
+      <div class="tradeoff">Off by default, and it should stay off until the matcher has been measured
+        on whoever is using the device. When on, a phrase he has recorded can replace what the
+        recogniser typed: right when the matcher is right, and confidently wrong when it is not.</div>
+
+      <label>Minimum phrase similarity <span class="setval" id="v_vocab_override_thr"></span></label>
+      <input type="range" id="s_vocab_override_thr" min="0.6" max="0.95" step="0.01">
+      <div class="means" id="d_vocab_override_thr"></div>
+      <div class="tradeoff">Lower means his recorded wording is used more often, including on utterances
+        it should not have matched. Only matters while the checkbox above is ticked.</div>
+    </div>
+
+    <div class="card">
+      <h2>Stop phrase</h2>
+      <label>Stop phrase (something he NEVER says in normal conversation)</label>
+      <div class="row"><input id="s_stop_phrase" style="flex:1"><button id="savestop" class="primary">Save</button></div>
+      <div class="hint">Saving makes it a critical recording prompt. Record it across several sessions so the matcher can recognize it reliably.</div>
+      <div class="cardnote">Two independent detectors watch for this phrase. <b>Either one</b> firing
+        stops the device, so a garbled transcript can still be caught by his own voice, and the other
+        way round.</div>
+
+      <label>1 &middot; By transcript: how close the typed words must be
+        <span class="setval" id="v_stop_text_sim"></span></label>
+      <input type="range" id="s_stop_text_sim" min="0.5" max="1" step="0.05">
+      <div class="means" id="d_stop_text_sim"></div>
+      <div class="tradeoff">Lower catches the stop phrase even when it comes out badly garbled, at the
+        cost of occasionally stopping on ordinary speech. The two mistakes do not cost the same: a
+        missed stop leaves a wrong sentence standing, a false stop is only a moment of silence.
+        The saved default is 0.85. Test both missed stops and false stops before changing it.</div>
+
+      <label>2 &middot; By his voice: how close it must sound to his recorded takes
+        <span class="setval" id="v_stop_match_thr"></span></label>
+      <input type="range" id="s_stop_match_thr" min="0.3" max="0.95" step="0.01">
+      <div class="means" id="d_stop_match_thr"></div>
+      <div class="tradeoff">This one needs recordings: it compares the audio against his own takes of
+        the phrase from the Record page. It does nothing until he has recorded some.
+        <b>start here: 0.50</b></div>
+
+      <label>&hellip;or it simply beats the next-best phrase by
+        <span class="setval" id="v_stop_match_margin"></span></label>
+      <input type="range" id="s_stop_match_margin" min="0" max="0.3" step="0.01">
+      <div class="means" id="d_stop_match_margin"></div>
+      <div class="tradeoff">A second way for detector 2 to fire: the stop phrase does not have to score
+        high in absolute terms, only clearly higher than everything else he might have said. Set to
+        0.00 to switch this off and use the score alone. <b>start here: 0.08</b></div>
+
+      <div class="hint">Pick a 3-word phrase with different sounds in it ("something is wrong" style,
+        never something he says for real). Record it on several different days, then use "Test: say it
+        now" below to check both detectors catch it; check it in the room and microphone position he actually uses.</div>
+      <label>Take it back out loud if he stops it this soon after it spoke
+        <span class="setval" id="v_retract_window_s"></span></label>
+      <input type="range" id="s_retract_window_s" min="0" max="15" step="0.5">
+      <div class="means" id="d_retract_window_s"></div>
+      <div class="tradeoff">Past this window the stop phrase still stops the device, it just does not
+        announce a retraction. By then the conversation has moved on and a late "scratch that"
+        confuses everyone. <b>start here: 6 s</b></div>
+      <label>What the device says when retracting</label>
+      <input id="s_retract_text">
+      <div class="row" style="margin-top:10px"><button id="testsay">Test: say it now</button><span class="hint">Listens for 6 s, reports whether the stop phrase was detected (and by which detector). Nothing is spoken aloud.</span></div>
+      <div id="testres" class="hint"></div>
+    </div>
+
+    <div class="card">
+      <h2>Pause and resume</h2>
+      <div class="hint">Two more phrases he never says otherwise. <b>Sleep</b> pauses translation: the device keeps listening but says nothing (it confirms once). <b>Wake</b> resumes it. Both are recording prompts once saved.</div>
+      <label>Sleep phrase</label>
+      <div class="row"><input id="s_sleep_phrase" style="flex:1"><button id="savesleep" class="primary">Save</button></div>
+      <label>Wake phrase</label>
+      <div class="row"><input id="s_wake_phrase" style="flex:1"><button id="savewake" class="primary">Save</button></div>
+      <label>What the device says when going to sleep / waking</label>
+      <div class="row"><input id="s_sleep_text" style="flex:1"><input id="s_wake_text" style="flex:1"></div>
+      <label>How close the typed words must be, for sleep and wake
+        <span class="setval" id="v_special_text_sim"></span></label>
+      <input type="range" id="s_special_text_sim" min="0.5" max="1" step="0.05">
+      <div class="means" id="d_special_text_sim"></div>
+      <div class="tradeoff">This can sit higher than the stop phrase, because both mistakes here are
+        recoverable: a caregiver can flip the state with the button below. Falling asleep by accident
+        mid-conversation is the one to avoid. <b>start here: 0.70</b></div>
+      <div class="row" style="margin-top:10px"><button id="awaketoggle">…</button><span class="hint">Caregiver override. He does this by voice.</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Listening</h2>
+      <label>Mode</label>
+      <select id="mode"><option value="auto">Auto-listen (hands-free, normal use)</option><option value="hold">Hold to talk (caregiver testing only)</option></select>
+      <div class="cardnote">When the device decides he has started talking, and when he has finished.
+        These two are the usual cause of "it cut me off" and "it keeps triggering on nothing".</div>
+
+      <label>How long a pause means he is finished <span class="setval" id="endsilv"></span></label>
+      <input id="endsil" type="range" min="800" max="3000" step="100" value="1500">
+      <div class="means" id="d_endsil"></div>
+      <div class="tradeoff">Too short and it cuts him off mid-sentence and sends half an utterance.
+        Too long and every reply sits waiting after he has stopped. Slower or more effortful speech
+        needs a longer pause than you would expect. <b>start here: 1.5 s</b></div>
+
+      <label>How loud speech has to be to count <span class="setval" id="v_sens"></span></label>
+      <input id="sens" type="range" min="6" max="20" step="1" value="10">
+      <div class="means" id="d_sens"></div>
+      <div class="tradeoff">This is measured against the room's quiet moments, not an absolute level, so it
+        re-learns as the room changes. Move it up if quiet speech is being missed; move it down if the device
+        keeps waking up on background noise. Other people talking count as speech to this slider, so if it
+        keeps picking them up, the fix that works every day is the microphone closer to him, not this
+        slider (see the note below the next one). <b>start here: 10</b></div>
+
+      <label>Longest single utterance <span class="setval" id="v_maxutt"></span></label>
+      <input id="maxutt" type="range" min="5" max="15" step="1" value="10">
+      <div class="means" id="d_maxutt"></div>
+      <div class="tradeoff">A safety cap. In a room where other people are talking the device may not hear a
+        pause and would otherwise keep recording; the cap sends what it has so the reply never waits more
+        than a few seconds. Too short and a long sentence gets sent in two pieces. <b>start here: 10 s</b></div>
+      <button id="talkbtn" style="margin-top:10px">Hold to talk (testing)</button>
+      <div class="row" style="margin-top:10px"><button id="newsess">New session (mic moved / new day)</button><button id="rebuild">Rebuild phrase bank</button></div>
+      <div id="matchmeta" class="hint"></div>
+    </div>
+
+    <div class="card">
+      <h2>Recent sentences</h2>
+      <div class="cardnote">Listen for the intended words, then correct the sentence and save. Use “Not him” for another voice.</div>
+      <table><tbody id="recent"></tbody></table>
+      <button id="refreshrecent" style="margin-top:8px">Refresh</button>
+    </div>
+
+    <div class="card">
+      <h2>Caregiver phrase board</h2>
+      <div class="hint">Critical phrases a caregiver can say on his behalf. These never go through recognition.</div>
+      <div class="board" id="board"></div>
+    </div>
+
+    <div class="card">
+      <h2>Vocabulary</h2>
+      <div class="row"><input id="newword" placeholder="Add a word or phrase he uses" style="flex:1"><button id="addword" class="primary">Add</button></div>
+      <div class="hint">Adding a word queues it for recording; it does not teach it. The matcher only knows a word once he has recorded at least one take of it on the Record page. Two or three takes, on different days, is where it gets reliable.</div>
+      <div class="hint" id="vocabmsg"></div>
+      <table><tbody id="vocabrows"></tbody></table>
+    </div>
+  </div>
+<details class="diagnostics"><summary>Device details</summary><p id="status">Checking device…</p><p id="gatemeta"></p><p id="hypmeta"></p><button id="retryaudio">Reconnect microphone</button></details>
+</div>
+
+<script>
+let ctx, node, stream, recording = false, chunks = [];
+let settings = {};
+let mode = 'auto';
+let preroll = [], prerollLen = 0, noiseDb = -55, loudBlocks = 0, lastLoud = 0, uttStart = 0;
+let lastCut = false;
+let pending = null;
+let outputQueue = [], requestChain = Promise.resolve(), requestsPending = 0;
+let audioGeneration = 0, lastAudioAt = 0, connecting = false;
+let recordingTest = false, testNumber = 0, recordingTestNumber = 0;
+let speakingUntil = 0;
+let uttGate = null;
+let testing = false;
+let audioReady = false;
+
+const GATE_RECORD = 20, HIM_MARGIN_DB = 12, LEAK_AFTER_MS = 180000, LEAK_NEAR_DB = 6;
+const gate = { record: [], leakDb: 0, lastOpen: 0, nearBlocks: 0, room: null, threshold: null };
+function loadGate() {
+  try {
+    const g = JSON.parse(localStorage.getItem('cpv-gate') || '{}');
+    if (Array.isArray(g.record)) gate.record = g.record.filter(r => r && Number.isFinite(r.db)).slice(-GATE_RECORD);
+  } catch (e) {}
+}
+function saveGate() { try { localStorage.setItem('cpv-gate', JSON.stringify({ record: gate.record })); } catch (e) {} }
+function hisLevel() {
+  if (!gate.record.length) return null;
+  const v = gate.record.map(r => r.db).sort((a, b) => a - b), m = v.length >> 1;
+  return (v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2) - gate.leakDb;
+}
+function gateThreshold(roomDb) {
+  const his = hisLevel();
+  return his == null ? roomDb : Math.max(roomDb, his - HIM_MARGIN_DB);
+}
+function learnLevel(clipId, db) {
+  if (!Number.isFinite(db)) return;
+  gate.record = gate.record.filter(r => String(r.id) !== String(clipId));
+  gate.record.push({ id: clipId, db });
+  if (gate.record.length > GATE_RECORD) gate.record.splice(0, gate.record.length - GATE_RECORD);
+  gate.leakDb = 0;
+  saveGate();
+}
+function forgetLevel(clipId) {
+  const n = gate.record.length;
+  gate.record = gate.record.filter(r => String(r.id) !== String(clipId));
+  if (gate.record.length !== n) saveGate();
+}
+function resetGate() { gate.record = []; gate.leakDb = 0; gate.lastOpen = performance.now(); saveGate(); }
+function leakTick(db, roomDb, thr, now) {
+  const near = thr > roomDb && db <= thr && db > thr - LEAK_NEAR_DB;
+  gate.nearBlocks = near ? gate.nearBlocks + 1 : 0;
+  if (gate.nearBlocks !== 3 || now - gate.lastOpen < LEAK_AFTER_MS) return;
+  gate.leakDb += 1;
+  if (awake && $('#state').className === 'listening') setState('listening', listeningText());
+}
+function listeningText() { return gate.leakDb > 0 ? 'Listening for speech. Having trouble hearing him today' : 'Listening for speech'; }
+function describeGate() {
+  const his = hisLevel(), f = v => `${Math.round(v)} dBFS`;
+  $('#gatemeta').textContent = his == null
+    ? `Gate: room level only, opens at ${gate.threshold == null ? '…' : f(gate.threshold)} (nothing spoken yet to learn his level)`
+    : `Gate: his level ${f(his)} from ${gate.record.length} sentence${gate.record.length === 1 ? '' : 's'}`
+      + `${gate.leakDb ? `, lowered ${gate.leakDb} dB because he has not been heard` : ''}; opens at ${gate.threshold == null ? '…' : f(gate.threshold)}`;
+}
+
+const RANGES = ['speak_delay_s','vocab_override_thr','stop_text_sim','stop_match_thr','stop_match_margin','retract_window_s','special_text_sim'];
+let awake = true;
+async function loadSettings() {
+  settings = await get('/api/live/settings');
+  for (const k of RANGES) { const el = $('#s_' + k); if (el) { el.value = settings[k]; paint(k, settings[k]); } }
+  $('#s_stop_phrase').value = settings.stop_phrase;
+  $('#s_retract_text').value = settings.retract_text;
+  $('#s_sleep_phrase').value = settings.sleep_phrase; $('#s_wake_phrase').value = settings.wake_phrase;
+  $('#s_sleep_text').value = settings.sleep_text; $('#s_wake_text').value = settings.wake_text;
+  $('#s_vocab_override').checked = !!settings.vocab_override;
+  for (const name of ['stop', 'sleep', 'wake']) $('#' + name + 'cue').textContent = '“' + settings[name + '_phrase'] + '”';
+}
+function fmtv(k, v) { v = +v; return k.endsWith('_s') ? v.toFixed(1) + ' s' : v.toFixed(2); }
+
+const pct = v => Math.round(+v * 100) + '%';
+function describe(k, v) {
+  v = +v;
+  switch (k) {
+    case 'speak_delay_s':
+      return v === 0
+        ? 'Speaks the moment he finishes. Nothing to cancel: the stop phrase can only retract afterwards.'
+        : `He has ${v.toFixed(1)} s after finishing to say the stop phrase. If he does, nothing is spoken at all and nobody hears the mistake.`;
+    case 'rate':
+      return v < 0.85 ? `${v.toFixed(2)}×, noticeably slower than ordinary speech.`
+           : v > 1.05 ? `${v.toFixed(2)}×, faster than ordinary speech.`
+                      : `${v.toFixed(2)}×, about ordinary speaking speed.`;
+    case 'vocab_override_thr':
+      return `His recorded wording replaces the transcript only above a similarity score of ${v.toFixed(2)}. This is not a probability of being correct.`;
+    case 'stop_text_sim':
+      return `The words the recogniser typed have to be about ${pct(v)} the same as the stop phrase.`;
+    case 'stop_match_thr':
+      return `His voice has to score ${v.toFixed(2)} or better against his own recorded takes of the phrase.`;
+    case 'stop_match_margin':
+      return v === 0
+        ? 'Off. Only the score above can trigger this detector.'
+        : `Or: the stop phrase beats the next-best phrase by ${v.toFixed(2)}, however low both scores are.`;
+    case 'retract_window_s':
+      return v === 0
+        ? 'Never announces a retraction. The stop phrase still stops the device.'
+        : `Stopping within ${v.toFixed(1)} s of it speaking makes it say the retraction line out loud.`;
+    case 'special_text_sim':
+      return `The typed words have to be about ${pct(v)} the same as the sleep or wake phrase.`;
+    case 'endsil':
+      return `He can pause for up to ${(v / 1000).toFixed(1)} s inside a sentence without the device deciding he is done.`;
+    case 'sens':
+      return `Sound has to be about ${26 - v} dB above the room to count as him starting to talk.`;
+    case 'maxutt':
+      return `If he has not paused after ${v} s, the device sends what it has heard so far.`;
+    default: return '';
+  }
+}
+function paint(k, v) {
+  const val = $('#v_' + k) || (k === 'endsil' ? $('#endsilv') : null), mean = $('#d_' + k);
+  if (val) val.textContent = k === 'endsil' ? (+v / 1000).toFixed(1) + ' s'
+                           : k === 'sens'   ? (26 - +v) + ' dB over the room'
+                           : k === 'maxutt' ? (+v) + ' s'
+                           : k === 'rate'   ? (+v).toFixed(2) + '×'
+                           : fmtv(k, v);
+  if (mean) mean.textContent = describe(k, v);
+}
+async function saveSetting(k, v) {
+  try { settings = await post('/api/live/settings', { [k]: v }); await loadSettings(); $('#caremessage').textContent = 'Settings saved.'; return true; }
+  catch (e) { $('#caremessage').textContent = 'Could not save: ' + e.message; await loadSettings(); return false; }
+}
+for (const k of RANGES) {
+  const el = $('#s_' + k); if (!el) continue;
+  el.oninput = () => paint(k, el.value);
+  el.onchange = () => saveSetting(k, el.value);
+}
+$('#s_vocab_override').onchange = (e) => saveSetting('vocab_override', e.target.checked);
+$('#s_retract_text').onchange = (e) => saveSetting('retract_text', e.target.value);
+$('#s_sleep_text').onchange = (e) => saveSetting('sleep_text', e.target.value);
+$('#s_wake_text').onchange = (e) => saveSetting('wake_text', e.target.value);
+$('#savesleep').onclick = async () => { const p = $('#s_sleep_phrase').value.trim(); if (!p || !await saveSetting('sleep_phrase', p)) return; $('#matchmeta').textContent = `sleep phrase saved: “${p}”. Record it on the Record page.`; loadVocab(); refreshStatus(); };
+$('#savewake').onclick = async () => { const p = $('#s_wake_phrase').value.trim(); if (!p || !await saveSetting('wake_phrase', p)) return; $('#matchmeta').textContent = `wake phrase saved: “${p}”. Record it on the Record page.`; loadVocab(); refreshStatus(); };
+$('#awaketoggle').onclick = async () => { const r = await post('/api/live/awake', { awake: !awake }); setAwake(r.awake); };
+function setAwake(a) {
+  awake = a;
+  if (!awake) clearOutput();
+  $('#awaketoggle').textContent = awake ? 'Put to sleep now' : 'Wake now';
+  if (!awake) setState('asleep', `Sleeping. Say “${settings.wake_phrase}” to wake`);
+  else if (audioReady && asrReady && $('#state').className === 'asleep') setState('listening', listeningText());
+}
+$('#savestop').onclick = async () => {
+  const sp = $('#s_stop_phrase').value.trim(); if (!sp) return;
+  if (!await saveSetting('stop_phrase', sp)) return;
+  $('#matchmeta').textContent = `stop phrase saved: “${sp}”. Now record it (Record page, critical set) so the matcher learns his version.`;
+  loadVocab();
+};
+function saveLocal() { try { localStorage.setItem('cpv-live2', JSON.stringify({ mode, endSil: $('#endsil').value, sens: $('#sens').value, maxUtt: $('#maxutt').value, rate: $('#rate').value, voice: $('#voice').value })); } catch (e) {} }
+function loadLocal() {
+  try { const s = JSON.parse(localStorage.getItem('cpv-live2') || '{}');
+    if (s.mode) mode = s.mode; if (s.endSil) $('#endsil').value = s.endSil; if (s.sens) $('#sens').value = s.sens; if (s.maxUtt) $('#maxutt').value = s.maxUtt; if (s.rate) $('#rate').value = s.rate; if (s.voice) $('#voice').value = s.voice;
+  } catch (e) {}
+  $('#mode').value = mode;
+  paint('endsil', $('#endsil').value); paint('sens', $('#sens').value); paint('maxutt', $('#maxutt').value); paint('rate', $('#rate').value);
+}
+
+let voices = [], speechNumber = 0;
+function loadVoices() {
+  const selected = $('#voice').value;
+  voices = speechSynthesis.getVoices().filter(v => v.localService && v.lang.toLowerCase().startsWith('en'));
+  $('#voice').replaceChildren(...voices.map(v => new Option(v.name, v.voiceURI)));
+  if (!voices.length) $('#voice').append(new Option('Install a local English voice', ''));
+  const pref = voices.find(v => v.default) || voices[0];
+  let saved = selected;
+  try { saved = JSON.parse(localStorage.getItem('cpv-live2') || '{}').voice || saved; } catch (e) {}
+  $('#voice').value = voices.some(v => v.voiceURI === saved) ? saved : pref?.voiceURI || '';
+}
+speechSynthesis.onvoiceschanged = loadVoices; loadVoices();
+function speak(text, onend, rate, onstart) {
+  if (!text) { if (onend) onend(); return; }
+  const v = voices.find(v => v.voiceURI === $('#voice').value);
+  if (!v) {
+    clearOutput();
+    setState('stopped', 'Voice needs setup');
+    $('#caremessage').textContent = 'Install a local English voice, then select it under How it speaks.';
+    return;
+  }
+  const number = ++speechNumber;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.voice = v;
+  u.rate = rate || +$('#rate').value;
+  speakingUntil = performance.now() + 1500 + text.length * 90;
+  u.onstart = () => {
+    if (number !== speechNumber) return;
+    speakingUntil = performance.now() + 1500 + text.length * 90;
+    if (onstart) onstart();
+  };
+  u.onend = () => {
+    if (number !== speechNumber) return;
+    speakingUntil = performance.now() + 500;
+    preroll = []; prerollLen = 0;
+    if (onend) onend();
+    setTimeout(drainOutput, 550);
+  };
+  u.onerror = () => {
+    if (number !== speechNumber) return;
+    speakingUntil = 0; clearOutput();
+    setState('stopped', 'Voice needs attention');
+    $('#caremessage').textContent = 'The sentence could not be spoken. Check the selected voice and speaker.';
+  };
+  speechSynthesis.speak(u);
+}
+
+async function initAudio() {
+  let src;
+  if (globalThis.PiMic?.active) {
+    ({ stream, ctx, node } = await PiMic.open());
+    src = node;
+  } else {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+    ctx = new AudioContext();
+    await ctx.audioWorklet.addModule('/static/recorder-worklet.js?v=' + Date.now());
+    src = ctx.createMediaStreamSource(stream);
+    node = new AudioWorkletNode(ctx, 'capture');
+  }
+  node.port.onmessage = (e) => {
+    lastAudioAt = performance.now();
+    if (e.data.pcm) {
+      if (!speechSynthesis.speaking && performance.now() >= speakingUntil) {
+        preroll.push(e.data.pcm); prerollLen += e.data.pcm.length;
+        while (prerollLen > ctx.sampleRate) prerollLen -= preroll.shift().length;
+      } else { preroll = []; prerollLen = 0; }
+      if (recording) chunks.push(e.data.pcm);
+    }
+    if (e.data.meter) {
+      const db = 20 * Math.log10(Math.max(e.data.meter.rms, 1e-6));
+      $('#meter').style.width = Math.max(0, Math.min(1, (db + 60) / 60)) * 100 + '%';
+      vadTick(db);
+    }
+  };
+  node.onprocessorerror = () => microphoneFailed();
+  for (const track of stream.getAudioTracks()) track.onended = () => microphoneFailed();
+  if (src !== node) src.connect(node);
+  node.port.postMessage('start'); await ctx.resume();
+  lastAudioAt = performance.now();
+  gate.lastOpen = lastAudioAt;
+  audioReady = true;
+  if (awake && asrReady) setState('listening', listeningText());
+  else if (!awake) setAwake(false);
+}
+function vadTick(db) {
+  if (!audioReady || !asrReady) return;
+  const endSil = +$('#endsil').value, room = noiseDb + 26 - +$('#sens').value;
+  const now = performance.now();
+  const deviceTalking = speechSynthesis.speaking || now < speakingUntil;
+  if (!recording && db <= room && !deviceTalking) noiseDb = 0.97 * noiseDb + 0.03 * db;
+  const thr = gateThreshold(room), speechy = db > thr;
+  gate.room = room; gate.threshold = thr;
+  if (!recording) {
+    if (mode !== 'auto' || deviceTalking) { loudBlocks = 0; gate.nearBlocks = 0; return; }
+    loudBlocks = speechy ? loudBlocks + 1 : 0;
+    if (loudBlocks >= 3) beginUtterance();
+    else leakTick(db, room, thr, now);
+  } else {
+    if (speechy) lastLoud = now;
+    if (mode !== 'hold' && now - lastLoud > endSil) endUtterance();
+    else if (now - uttStart > +$('#maxutt').value * 1000) { lastCut = true; endUtterance(); }
+  }
+}
+function beginUtterance() {
+  if (recording || !audioReady || !asrReady || speechSynthesis.speaking || performance.now() < speakingUntil) return;
+  recordingTest = testing; recordingTestNumber = testNumber;
+  chunks = preroll.slice(); recording = true; lastLoud = uttStart = performance.now(); loudBlocks = 0; lastCut = false;
+  gate.lastOpen = uttStart; gate.nearBlocks = 0; uttGate = gate.threshold;
+  setState(awake ? 'listening' : 'asleep', awake ? 'Hearing you…' : `Sleeping, hearing you (say “${settings.wake_phrase}” to wake)`);
+}
+async function endUtterance() {
+  if (!recording) return;
+  recording = false;
+  const blob = encodeWav(chunks, ctx.sampleRate); chunks = [];
+  if (blob.size < ctx.sampleRate * 0.4 * 4) { if (awake) setState('listening', listeningText()); else setAwake(false); return; }
+  const job = { test: recordingTest, number: recordingTestNumber, cut: lastCut, generation: audioGeneration, gate: uttGate };
+  requestsPending++;
+  requestChain = requestChain.catch(() => {}).then(() => transcribe(blob, job)).finally(() => {
+    requestsPending--; drainOutput();
+  });
+  await requestChain;
+}
+
+async function transcribe(blob, job) {
+  if (job.generation !== audioGeneration) return;
+  setBusy(true);
+  try {
+    const fd = new FormData(); fd.append('audio', blob, 'u.wav');
+    fd.append('preview_only', String(job.test));
+    fd.append('pending_output', String(!!pending || outputQueue.length > 0));
+    if (Number.isFinite(job.gate)) fd.append('gate_dbfs', job.gate.toFixed(1));
+    const r = await fetch('/api/live/transcribe', { method: 'POST', body: fd });
+    if (!r.ok) throw new Error((await r.text()).slice(0, 200));
+    const res = await r.json();
+    if (job.generation !== audioGeneration) return;
+    setBusy(false);
+    if (job.test) { if (job.number === testNumber) reportTest(res); return; }
+    const d = res.decision || { action: res.ok && res.text ? 'speak' : 'ignore', text: res.text, delay_s: 0 };
+    if (d.action === 'sleep' || d.action === 'wake') {
+      clearOutput();
+      show(null, d.action === 'sleep' ? 'Voice paused' : 'Voice resumed');
+      speak(d.say, () => setAwake(d.action === 'wake'), 1.0);
+      setAwake(d.action === 'wake');
+      return;
+    }
+    if (d.action === 'ignore' && d.asleep) { setAwake(false); return; }
+    if (d.action === 'stop') {
+      const cancelled = pending?.text || outputQueue[0]?.decision.text;
+      clearOutput();
+      if (cancelled) { showCancelled(cancelled); }
+      else if (d.retract) { showCancelled(null); speak(d.retract_text, resumeListening, 1.0); }
+      else setState('stopped', 'Stop phrase heard');
+      setTimeout(() => { if (!pending && !speechSynthesis.speaking) resumeListening(); }, 2500);
+      return;
+    }
+    if (d.action === 'ignore') { show(null, d.reason ? 'Not spoken: ' + d.reason : 'Nothing clear'); setState('listening', listeningText()); return; }
+    outputQueue.push({ res, decision: d, cut: job.cut });
+  } catch (e) {
+    if (job.generation !== audioGeneration) return;
+    setBusy(false); clearOutput();
+    show(null, 'Error: ' + e.message); setState('stopped', 'Connection needs attention');
+  }
+}
+function clearOutput() {
+  if (pending) clearTimeout(pending.timer);
+  pending = null; outputQueue = [];
+}
+function drainOutput() {
+  if (!awake || !audioReady || recording || requestsPending || speechSynthesis.speaking || performance.now() < speakingUntil) return;
+  if (pending) {
+    if (performance.now() < pending.deadline) return;
+    const item = pending; pending = null;
+    setState('speaking', 'Speaking');
+    speak(item.text, () => {
+      post('/api/live/confirm', { clip_id: item.clip_id, spoken_text: item.text, stage: 'end' }).catch(() => {});
+      resumeListening();
+    }, undefined, () => {
+      post('/api/live/confirm', { clip_id: item.clip_id, spoken_text: item.text })
+        .then(() => learnLevel(item.clip_id, item.speech_dbfs))
+        .catch(() => {
+          $('#caremessage').textContent = 'The spoken sentence could not be saved for review. Check the connection.';
+        });
+    });
+    return;
+  }
+  const item = outputQueue.shift();
+  if (!item) return;
+  lastCut = item.cut;
+  show(item.res, null, item.decision.text);
+  pending = { clip_id: item.res.clip_id, text: item.decision.text, speech_dbfs: item.res.qc?.speech_dbfs,
+    deadline: performance.now() + item.decision.delay_s * 1000 };
+  if (item.decision.delay_s > 0) {
+    setState('preview', `Speaking in ${item.decision.delay_s.toFixed(1)} s. Say “${settings.stop_phrase}” to cancel`);
+  }
+  pending.timer = setTimeout(drainOutput, item.decision.delay_s * 1000);
+}
+function show(res, msg, spoken) {
+  const el = $('#hyptext');
+  if (!res) { el.className = 'placeholder'; el.textContent = msg || 'Take your time.'; $('#hypmeta').textContent = ''; $('#conversationhelp').hidden = false; $('#utterancehint').textContent = ''; return; }
+  el.className = '';
+  $('#conversationhelp').hidden = true;
+  $('#utterancehint').textContent = lastCut ? 'The listening limit was reached. You can continue speaking.' : '';
+  if (spoken && spoken !== res.text) el.textContent = spoken;
+  else el.textContent = res.text || spoken || '';
+  const m = res.match && res.match.ok && res.match.candidates && res.match.candidates[0];
+  $('#hypmeta').textContent = `${res.latency_ms} ms · ${res.model}${res.device ? ' on ' + res.device : ''}`
+    + (res.load_ms ? ` · plus ${(res.load_ms / 1000).toFixed(1)} s loading the model (first use)` : '')
+    + (res.decision && res.decision.override && m ? ` · replaced by his recorded phrase (similarity ${m.score.toFixed(3)})` : '')
+    + (res.hint ? ` · mic: ${res.hint.toLowerCase()}` : '')
+    + (lastCut ? ` · cut at ${$('#maxutt').value} s: a long sentence, or other voices in the room` : '');
+}
+function showCancelled(text) {
+  const el = $('#hyptext'); el.className = 'cancelled'; el.textContent = text || el.textContent || '-';
+  $('#hypmeta').textContent = text ? 'cancelled by the stop phrase' : 'retracted by the stop phrase';
+  setState('stopped', text ? 'Cancelled' : 'Retracted');
+}
+function setState(cls, txt) { const s = $('#state'); s.className = cls; s.textContent = txt; }
+function resumeListening() { if (audioReady && asrReady && awake) setState('listening', listeningText()); }
+function setBusy(b) { $('#hypcard').classList.toggle('busy', b); if (b) setState('preview', 'Finding your words…'); }
+
+function setCare(open) {
+  $('#care').style.display = open ? 'block' : 'none';
+  $('#caretoggle').setAttribute('aria-expanded', String(open));
+  $('#conversation').inert = open;
+  $('header').inert = open;
+  if (open) {
+    $('#careclose').focus();
+    Promise.all([loadSettings(), loadRecent(), loadVocab()]).catch(e => {
+      $('#caremessage').textContent = 'Could not load the caregiver tools. Check the connection and try again.';
+    });
+  } else $('#caretoggle').focus();
+}
+$('#caretoggle').onclick = () => setCare(true);
+$('#careclose').onclick = () => setCare(false);
+$('#care').addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.preventDefault(); setCare(false); }
+  if (e.key !== 'Tab') return;
+  const items = $$('button, a, input, select, textarea, summary', $('#care')).filter(el => !el.disabled && el.getClientRects().length);
+  const first = items[0], last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
+const careGrid = $('#care .grid2');
+for (const card of [...careGrid.children]) {
+  const heading = card.querySelector('h2');
+  if (card.querySelector('#recent')) { card.classList.add('recent-card'); careGrid.prepend(card); continue; }
+  const disclosure = document.createElement('details'); disclosure.className = 'care-section';
+  const summary = document.createElement('summary'); summary.textContent = heading.textContent;
+  heading.remove(); disclosure.append(summary);
+  while (card.firstChild) disclosure.append(card.firstChild);
+  card.append(disclosure);
+}
+
+async function loadRecent() {
+  const r = await get('/api/live/recent');
+  $('#recent').innerHTML = r.clips.map(c => `<tr>
+    <td class="mono" style="white-space:nowrap">${new Date(c.created_at * 1000).toLocaleTimeString()}</td>
+    <td><input aria-label="Correct sentence from ${new Date(c.created_at * 1000).toLocaleTimeString()}" data-id="${c.id}" value="${escapeHtml(c.transcript)}" placeholder="(not spoken)"></td>
+    <td style="white-space:nowrap"><span class="pill ${c.status === 'accepted' ? 'functional' : 'critical'}" title="${c.status === 'pending' ? 'the device\'s own guess; Save confirms it as what he said' : c.status}">${c.status === 'pending' ? 'unverified' : c.status}</span></td>
+    <td style="white-space:nowrap"><button class="tiny" data-fix="${c.id}" title="confirm (after fixing the text if needed)">Save</button> <button class="tiny bad" data-rej="${c.id}">Not him</button></td></tr>`).join('') || '<tr><td colspan="4" class="muted">No recent sentences yet. They appear here after speech is heard.</td></tr>';
+  $$('#recent [data-fix]').forEach(b => b.onclick = async () => { await post('/api/live/fix', { clip_id: b.dataset.fix, correct_text: $(`#recent input[data-id="${b.dataset.fix}"]`).value }); loadRecent(); });
+  $$('#recent [data-rej]').forEach(b => b.onclick = async () => { await post('/api/live/fix', { clip_id: b.dataset.rej, correct_text: '' }); forgetLevel(b.dataset.rej); loadRecent(); });
+}
+$('#refreshrecent').onclick = loadRecent;
+async function loadVocab() {
+  const v = await get('/api/live/vocab');
+  $('#vocabrows').innerHTML = v.labels.map(l => `<tr><td>${escapeHtml(l.text)}${l.text === (settings.stop_phrase || '').toLowerCase() ? ' <span class="pill critical">stop phrase</span>' : ''}</td><td class="mono" style="text-align:right;color:${l.own_takes ? 'var(--ok)' : 'var(--warn)'}">${l.own_takes ? l.own_takes + ' takes' : 'not recorded'}</td></tr>`).join('');
+}
+$('#addword').onclick = async () => {
+  const t = $('#newword').value.trim(); if (!t) return;
+  const r = await post('/api/live/vocab', { text: t });
+  $('#newword').value = '';
+  $('#vocabmsg').innerHTML = r.duplicate
+    ? `“${escapeHtml(t)}” was already in the list.`
+    : `“${escapeHtml(t)}” queued. <b>Record it</b> on the Record page, then Rebuild phrase bank. Until then the matcher cannot hear it.`;
+  loadVocab();
+};
+$('#rebuild').onclick = async () => { $('#rebuild').disabled = true; try { const r = await post('/api/live/match/rebuild', {}); $('#matchmeta').textContent = r.ok ? `bank: ${r.exemplars} takes, ${r.labels} labels` : r.reason; } catch (e) { $('#matchmeta').textContent = e.message; } $('#rebuild').disabled = false; refreshStatus(); };
+$('#newsess').onclick = async () => { await post('/api/live/match/new_session', {}); resetGate(); describeGate(); $('#matchmeta').textContent = 'session reset; the gate relearns his level'; };
+$('#testsay').onclick = () => {
+  clearOutput(); testNumber++; testing = true;
+  const number = testNumber;
+  $('#testres').textContent = 'Listening for the stop phrase… say it now.';
+  setTimeout(() => {
+    if (!testing || number !== testNumber) return;
+    testing = false;
+    if (recording && recordingTest) { $('#testres').textContent = 'Checking the phrase…'; endUtterance(); }
+    else $('#testres').textContent = requestsPending ? 'Checking the phrase…' : 'Nothing detected in 6 s.';
+  }, 6500);
+};
+function reportTest(res) {
+  testing = false; const d = res.decision || {};
+  const m = res.match && res.match.ok && res.match.candidates ? res.match.candidates[0] : null;
+  $('#testres').textContent = (d.action === 'stop' ? `STOP PHRASE detected (by ${d.by}). ` : `Not detected. `)
+    + `Parakeet heard “${res.text}”; ${m ? `matcher top “${m.text}” (similarity ${m.score.toFixed(3)})` : 'matcher had no candidate'}. Nothing was spoken.`;
+  resumeListening();
+}
+let asrReady = false;
+async function refreshStatus() {
+  const st = await get('/api/live/status'); const m = st.matcher || {};
+  if (st.asr_installed && !st.asr_ready && st.asr_eager !== false) {
+    asrReady = false;
+    if (audioReady && awake) setState('preview', 'Warming up, a few seconds');
+    setTimeout(() => refreshStatus().catch(() => setState('stopped', 'Connection needs attention')), 1500);
+  } else if (!asrReady) {
+    asrReady = !!st.asr_installed && (!!st.asr_ready || st.asr_eager === false);
+    if (audioReady && awake && asrReady) setState('listening', listeningText());
+  }
+  $('#status').textContent = (st.asr_installed ? `${st.model}` + (st.device_actual ? ` on ${st.device_actual}` : '') : 'no sentence recogniser (run scripts/fetch_models.py)')
+    + ' · ' + (!m.enabled || !m.installed || !m.model_present ? 'matcher off' : `phrase matcher: ${m.exemplars_own} takes`) + ` · stop: “${settings.stop_phrase || '…'}” · sleep/wake: “${settings.sleep_phrase || '…'}” / “${settings.wake_phrase || '…'}”`;
+  if (typeof st.awake === 'boolean') setAwake(st.awake);
+  if (!st.asr_installed) { setState('stopped', 'Speech recognition needs setup'); show(null, 'A caregiver can help get things ready.'); }
+}
+(async () => {
+  const b = await get('/api/live/board');
+  $('#board').innerHTML = b.phrases.map(p => `<button data-t="${escapeHtml(p)}">${escapeHtml(p)}</button>`).join('');
+  $$('#board button').forEach(btn => btn.onclick = () => speak(btn.dataset.t));
+  await loadSettings(); await refreshStatus();
+})().catch(() => { setState('stopped', 'Connection needs attention'); show(null, 'A caregiver can check the connection.'); });
+
+const tb = $('#talkbtn');
+tb.onmousedown = () => { if (mode === 'hold') beginUtterance(); };
+tb.onmouseup = tb.onmouseleave = () => { if (recording) endUtterance(); };
+$('#mode').onchange = () => { mode = $('#mode').value; saveLocal(); };
+$('#endsil').oninput = () => { paint('endsil', $('#endsil').value); saveLocal(); };
+$('#sens').oninput = () => paint('sens', $('#sens').value);
+$('#maxutt').oninput = () => paint('maxutt', $('#maxutt').value);
+$('#rate').oninput = () => paint('rate', $('#rate').value);
+$('#sens').onchange = $('#maxutt').onchange = $('#rate').onchange = $('#voice').onchange = saveLocal;
+
+loadLocal();
+loadGate();
+async function connectMicrophone() {
+  if (connecting) return;
+  connecting = true; audioReady = false; audioGeneration++;
+  clearOutput();
+  recording = false; chunks = []; preroll = []; prerollLen = 0; loudBlocks = 0; noiseDb = -55;
+  try {
+    if (stream) stream.getTracks().forEach(track => { track.onended = null; track.stop(); });
+    if (ctx) { await ctx.close().catch(() => {}); ctx = null; }
+    await initAudio();
+  }
+  catch (e) {
+    audioReady = false;
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    if (ctx) { await ctx.close().catch(() => {}); ctx = null; }
+    setState('stopped', 'Microphone needs attention');
+    show(null, 'A caregiver can help reconnect the microphone.');
+    $('#caremessage').textContent = e.name === 'NotAllowedError'
+      ? 'Microphone access is blocked. Allow the microphone in the browser, then choose Reconnect microphone in Device details.'
+      : 'Check that the microphone is connected, then choose Reconnect microphone in Device details.';
+  }
+  finally { connecting = false; }
+}
+$('#retryaudio').onclick = async () => {
+  $('#caremessage').textContent = '';
+  await connectMicrophone();
+};
+function microphoneFailed() {
+  if (!audioReady) return;
+  audioReady = false; audioGeneration++; recording = false;
+  chunks = []; preroll = []; prerollLen = 0; clearOutput();
+  setState('stopped', 'Microphone needs attention');
+  show(null, 'A caregiver can help reconnect the microphone.');
+  $('#caremessage').textContent = 'The microphone stopped sending sound. Check its connection, then choose Reconnect microphone.';
+}
+setInterval(() => {
+  if (audioReady && (performance.now() - lastAudioAt > 5000 || stream.getAudioTracks().some(track => track.readyState === 'ended'))) microphoneFailed();
+  drainOutput();
+  if ($('#care').style.display === 'block') describeGate();
+}, 250);
+connectMicrophone();
+</script></body></html>

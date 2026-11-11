@@ -1,0 +1,54 @@
+{
+  "_provenance": "Recorded sky2-bench 1.1.0 run on the Sky-2 mini-PC, 1 September 2026. Transcribed into this tool's report schema so `bench.sh --compare` can put the two boxes side by side. It was NOT produced by scripts/asr/bench.py, so only the fields the comparison table reads are filled in.",
+  "_conditions": "Idle box, no webapp, but Firefox and a few terminals were open. Governor was powersave (untested lever). Stock Parakeet-TDT-0.6b-v2 int8 through sherpa-onnx, greedy decoding, CPU.",
+  "tool": "sky2-bench",
+  "version": "1.1.0",
+  "label": "sky2-2026-09-01",
+  "started_at": "2026-09-01T00:00:00-05:00",
+  "hardware": {
+    "hostname": "controller",
+    "os": "Linux 6.6.9",
+    "distro": "Kali GNU/Linux rolling",
+    "python": "3.11",
+    "cpu": {
+      "arch": "x86_64",
+      "model": "Intel Celeron J6412",
+      "logical_cores": 4,
+      "physical_cores": 4,
+      "max_mhz": 2600.0,
+      "simd": ["sse4_2", "sse4_1"],
+      "simd_checked": ["avx512f", "avx2", "fma", "sse4_2", "sse4_1"],
+      "governor": "powersave"
+    },
+    "memory": { "total_gb": 7.53, "available_gb": 3.98 },
+    "storage": {},
+    "compute": { "matmul_gflops": 36.15 },
+    "accelerator": { "edge_tpu_present": false },
+    "temps_idle": {}
+  },
+  "asr": {
+    "model_dir": "(sky2-bench's own download)",
+    "engine": "sherpa-onnx",
+    "headline_label": "3",
+    "best_threads": 2,
+    "more_threads_slower": true,
+    "load_s": 2.39,
+    "peak_rss_mb": 1350,
+    "length_sweep": {
+      "3": { "median_s": 1.535, "rtf": 0.512, "repeats": 5 },
+      "30": { "median_s": 14.4, "rtf": 0.48, "repeats": 5 }
+    },
+    "thread_sweep_medians_s": { "1": 2.838, "2": 1.535, "4": 2.329 },
+    "headline_s": 1.535,
+    "headline_idle_s": 1.535,
+    "headline_idle_rtf": 0.512,
+    "headline_source": "idle",
+    "verdict": "USABLE",
+    "pi_demo_box": true,
+    "notes": [
+      "No AVX2 (Elkhart Lake / Tremont): onnxruntime's fast int8 kernels fall back. This is the single largest factor in the 1.535 s and no setting recovers it.",
+      "Drift under 1% and a flat 0.48-0.51x real-time factor from 1 s to 30 s: honestly slow rather than thermally unstable.",
+      "4 threads was 1.5x slower than 2 -- memory-bandwidth contention, not a scheduling problem."
+    ]
+  }
+}

@@ -1,0 +1,191 @@
+# Reference vocabulary
+# Not loaded by the application. Promote selected entries into prompts/*.txt.
+
+# === functional-starter ===
+
+# Functional starter vocabulary: replace/extend with his real words.
+# One item per line. Lines starting with # are category labels (ignored by WillSpeak).
+
+# --- People (fill with real names first: names are the highest-value items)
+mom
+dad
+nurse
+doctor
+teacher
+everyone
+
+# --- Core requests
+I want
+I need
+I don't want
+help me
+more please
+all done
+not yet
+wait
+again
+stop please
+
+# --- Feelings & states
+I'm tired
+I'm hungry
+I'm thirsty
+I'm hot
+I'm cold
+I'm okay
+I'm not okay
+I'm bored
+I'm excited
+I'm frustrated
+that hurts
+I feel sick
+
+# --- Yes / no / social
+yes
+no
+maybe
+please
+thank you
+you're welcome
+hello
+goodbye
+good morning
+good night
+I love you
+that's funny
+good job
+never mind
+
+# --- Food & drink
+water
+juice
+milk
+coffee
+snack
+breakfast
+lunch
+dinner
+sandwich
+pizza
+chicken
+pasta
+fruit
+apple
+banana
+chocolate
+ice cream
+more food
+I'm finished eating
+
+# --- Body & care
+bathroom
+medicine
+glasses
+shower
+brush my teeth
+wash my hands
+my head
+my stomach
+my back
+my legs
+my arm
+itchy
+too tight
+too loose
+
+# --- Position & comfort
+sit up
+lie down
+turn me
+move my chair
+fix my pillow
+blanket on
+blanket off
+too loud
+too bright
+open the window
+close the door
+
+# --- Places & moving
+go outside
+go home
+my room
+living room
+kitchen
+school
+the park
+the store
+the car
+let's go
+slow down
+
+# --- Activities
+watch TV
+music on
+music off
+my show
+a movie
+play a game
+read to me
+computer
+phone
+tablet
+go on YouTube
+
+# --- Time & questions
+now
+later
+today
+tomorrow
+what time is it
+when
+who is coming
+what's happening
+why
+
+# --- Repair & control (conversation fixes he'll actually need)
+that's not what I said
+try again
+listen to me
+give me a minute
+I'll spell it
+ask me yes or no
+
+# === critical-phrases ===
+
+# Critical / safety set -15 takes each, across good and bad days.
+# Closed-set classification only; never open-vocabulary ASR.
+I'm in pain
+something is wrong
+I need help now
+call mom
+call for help
+I can't breathe well
+bathroom now
+I'm going to be sick
+yes
+no
+stop
+help
+
+# === control-phrase-candidates ===
+
+# Control-phrase candidates: CHOOSE WITH HIM. Rules from the design docs:
+#   * three words, distinct sounds (more phonetic material for both detectors than a single word)
+#   * never said in real conversation (that's what makes acting without confirmation safe)
+#   * stop / sleep / wake must not share their sound-shape with each other
+#     or with anything he actually says
+# Sleep/wake may deliberately share one word (only compared against each other while asleep).
+
+# --- Stop phrase candidates
+purple elephant table
+green piano window
+seven silver mountains
+orange rocket kitchen
+blue camel thunder
+velvet dragon morning
+
+# --- Sleep / wake pairs
+voice go to sleep   |   voice wake up
+robot take a break  |   robot come back
+quiet mode begin    |   quiet mode finish
